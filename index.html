@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>DT Studio 場記表</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg0: #222426;
+  --bg1: #2c2e31;
+  --bg2: #363739;
+  --bg3: #404244;
+  --bg4: #4c4e50;
+  --border: rgba(255,255,255,0.10);
+  --border-md: rgba(255,255,255,0.18);
+  --text-primary: #e8e8e6;
+  --text-secondary: #888885;
+  --text-hint: #555552;
+  --orange: #d4711a;
+  --orange-dim: rgba(212,113,26,0.18);
+  --orange-glow: rgba(212,113,26,0.35);
+  --green: #3a7d44;
+  --green-dim: rgba(58,125,68,0.2);
+  --blue: #1a5c8c;
+  --blue-dim: rgba(26,92,140,0.2);
+  --amber: #b87a12;
+  --amber-dim: rgba(184,122,18,0.2);
+  --slate: #4a5568;
+  --slate-dim: rgba(74,85,104,0.2);
+  --red-ng: #c0392b;
+  --red-dim: rgba(192,57,43,0.2);
+  --radius: 6px;
+  --radius-lg: 10px;
+  --mono: 'IBM Plex Mono', monospace;
+  --sans: 'Noto Sans TC', sans-serif;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; background: var(--bg0); color: var(--text-primary); font-family: var(--sans); font-size: 14px; overscroll-behavior: none; }
+
+/* ── HEADER ── */
+#header {
+  background: var(--bg1);
+  border-bottom: 1px solid var(--border);
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  position: sticky; top: 0; z-index: 50;
+}
+#header .logo {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--orange);
+  letter-spacing: 0.04em;
+  line-height: 1.3;
+  font-weight: 500;
+}
+#header .logo span { display: block; color: var(--text-secondary); font-size: 10px; letter-spacing: 0.02em; }
+#header .sep { width: 1px; height: 28px; background: var(--border-md); }
+#header .title-text { font-size: 14px; font-weight: 500; color: var(--text-primary); letter-spacing: 0.02em; }
+#header .spacer { flex: 1; }
+#header .date-tag {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-secondary);
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 3px 8px;
+}
+
+/* ── LAYOUT ── */
+#app { padding: 10px; display: flex; flex-direction: column; gap: 8px; max-width: 600px; margin: 0 auto; }
+
+/* ── CARD ── */
+.card {
+  background: var(--bg1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 12px;
+}
+.card-label {
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-hint);
+  font-family: var(--mono);
+  margin-bottom: 10px;
+}
+
+/* ── TIMER ROW ── */
+.timer-row { display: flex; align-items: center; gap: 8px; }
+#timer {
+  font-family: var(--mono);
+  font-size: 30px;
+  font-weight: 500;
+  letter-spacing: 2px;
+  color: var(--text-secondary);
+  flex: 1;
+  transition: color 0.3s;
+}
+#timer.on { color: var(--orange); text-shadow: 0 0 20px var(--orange-glow); }
+.roll-btn {
+  background: var(--green);
+  border: none;
+  border-radius: var(--radius);
+  color: #fff;
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 500;
+  padding: 9px 14px;
+  cursor: pointer;
+  letter-spacing: 0.05em;
+  transition: opacity 0.15s;
+}
+.stop-btn {
+  background: var(--red-ng);
+  border: none;
+  border-radius: var(--radius);
+  color: #fff;
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 500;
+  padding: 9px 14px;
+  cursor: pointer;
+  letter-spacing: 0.05em;
+  transition: opacity 0.15s;
+}
+.roll-btn:active, .stop-btn:active { opacity: 0.75; }
+
+/* ── META GRID ── */
+.meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-top: 10px; }
+.field { display: flex; flex-direction: column; gap: 4px; }
+.field label { font-size: 10px; letter-spacing: 0.06em; color: var(--text-hint); font-family: var(--mono); text-transform: uppercase; }
+.field input {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-primary);
+  font-size: 13px;
+  font-family: var(--sans);
+  padding: 7px 9px;
+  width: 100%;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.field input:focus { border-color: var(--border-md); }
+.field input::placeholder { color: var(--text-hint); }
+
+/* ── NG TYPE BUTTONS ── */
+.type-grid { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 6px; margin-bottom: 10px; }
+.tbtn {
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--bg2);
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-family: var(--sans);
+  font-weight: 500;
+  padding: 9px 4px 8px;
+  text-align: center;
+  cursor: pointer;
+  line-height: 1.4;
+  transition: all 0.15s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.tbtn .ticon { font-size: 16px; display: block; }
+.tbtn:active { transform: scale(0.96); }
+
+/* type colours */
+.tbtn.t0 { border-color: var(--amber); color: var(--amber); background: var(--amber-dim); }
+.tbtn.t1 { border-color: #e24b4a; color: #e24b4a; background: var(--red-dim); }
+.tbtn.t2 { border-color: #185fa5; color: #7ab0e0; background: var(--blue-dim); }
+.tbtn.t3 { border-color: #5f5e5a; color: #9a9993; background: var(--slate-dim); }
+
+/* unselected dims */
+.tbtn.unsel { opacity: 0.38; border-color: var(--border) !important; background: var(--bg2) !important; color: var(--text-hint) !important; }
+
+/* ── FIELDS ROW ── */
+.fields-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-bottom: 7px; }
+.tc-wrap { display: flex; gap: 4px; }
+.tc-wrap input { flex: 1; }
+.grab-btn {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--orange);
+  font-size: 16px;
+  padding: 0 10px;
+  cursor: pointer;
+  transition: background 0.15s;
+  display: flex; align-items: center; justify-content: center;
+}
+.grab-btn:active { background: var(--orange-dim); }
+
+.photo-box {
+  border: 1px dashed var(--border-md);
+  border-radius: var(--radius);
+  background: var(--bg2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  overflow: hidden;
+  min-height: 56px;
+  transition: border-color 0.15s;
+}
+.photo-box:active { border-color: var(--orange); }
+.photo-box img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.ph-placeholder { display: flex; flex-direction: column; align-items: center; gap: 3px; color: var(--text-hint); font-size: 11px; }
+.ph-placeholder .ph-icon { font-size: 20px; }
+#photo-input { display: none; }
+
+.note-inp {
+  width: 100%;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-primary);
+  font-size: 13px;
+  font-family: var(--sans);
+  padding: 7px 9px;
+  outline: none;
+  margin-bottom: 8px;
+  transition: border-color 0.15s;
+}
+.note-inp:focus { border-color: var(--border-md); }
+.note-inp::placeholder { color: var(--text-hint); }
+
+/* ── REC BUTTON ── */
+.rec-btn {
+  width: 100%;
+  background: var(--red-ng);
+  border: none;
+  border-radius: var(--radius);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  font-family: var(--mono);
+  letter-spacing: 0.08em;
+  padding: 13px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: opacity 0.15s;
+}
+.rec-btn:active { opacity: 0.82; }
+.rec-btn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(255,255,255,0.07) 0%, transparent 100%);
+  pointer-events: none;
+}
+
+/* ── LOG SECTION ── */
+.log-hdr { display: flex; align-items: center; gap: 6px; margin-bottom: 10px; }
+.log-count { font-family: var(--mono); font-size: 11px; color: var(--text-secondary); flex: 1; }
+.hbtn {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-family: var(--sans);
+  padding: 5px 10px;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+.hbtn:hover { background: var(--bg3); color: var(--text-primary); }
+.hbtn.orange { color: var(--orange); border-color: var(--orange-dim); }
+
+.log-empty { font-size: 13px; color: var(--text-hint); text-align: center; padding: 16px 0; font-family: var(--mono); }
+
+.log-item {
+  display: grid;
+  grid-template-columns: 22px 1fr auto;
+  gap: 6px;
+  align-items: start;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--border);
+}
+.log-item:last-child { border-bottom: none; }
+.log-num { font-family: var(--mono); font-size: 11px; color: var(--text-hint); padding-top: 2px; }
+.log-main { display: flex; flex-direction: column; gap: 3px; }
+.log-top { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.log-roll { font-family: var(--mono); font-size: 11px; color: var(--orange); background: var(--orange-dim); border: 1px solid rgba(212,113,26,0.3); border-radius: 3px; padding: 1px 5px; }
+.log-tc { font-family: var(--mono); font-size: 14px; font-weight: 500; color: var(--text-primary); }
+.log-ppt { font-family: var(--mono); font-size: 11px; color: var(--text-secondary); }
+.log-badge { font-size: 11px; padding: 1px 8px; border-radius: 20px; font-weight: 500; }
+.lb0 { background: var(--amber-dim); color: #d4a843; border: 1px solid rgba(184,122,18,0.3); }
+.lb1 { background: var(--red-dim); color: #e06b6a; border: 1px solid rgba(192,57,43,0.3); }
+.lb2 { background: var(--blue-dim); color: #7ab0e0; border: 1px solid rgba(26,92,140,0.3); }
+.lb3 { background: var(--slate-dim); color: #888885; border: 1px solid rgba(74,85,104,0.3); }
+.log-thumb { width: 30px; height: 21px; border-radius: 3px; object-fit: cover; border: 1px solid var(--border); }
+.log-note { font-size: 12px; color: var(--text-secondary); font-style: italic; }
+.del-btn { background: none; border: none; cursor: pointer; color: var(--text-hint); font-size: 16px; padding: 0 2px; transition: color 0.12s; }
+.del-btn:hover { color: var(--red-ng); }
+
+/* ── FLASH OVERLAY ── */
+#flash-overlay {
+  position: fixed; inset: 0; z-index: 999;
+  display: flex; align-items: center; justify-content: center;
+  pointer-events: none; opacity: 0;
+}
+#flash-overlay.fire { animation: flashBg 0.65s ease-out forwards; }
+@keyframes flashBg {
+  0%   { opacity: 0; background: rgba(0,0,0,0); }
+  12%  { opacity: 1; background: rgba(255,255,255,0.12); }
+  40%  { opacity: 1; background: rgba(0,0,0,0); }
+  100% { opacity: 0; }
+}
+#flash-icon {
+  font-size: 88px;
+  opacity: 0;
+  transform: scale(0.3);
+  filter: drop-shadow(0 0 30px rgba(255,255,255,0.4));
+}
+#flash-overlay.fire #flash-icon {
+  animation: iconBurst 0.6s cubic-bezier(0.18, 1.5, 0.4, 1) forwards;
+}
+@keyframes iconBurst {
+  0%   { opacity: 0; transform: scale(0.3); }
+  25%  { opacity: 1; transform: scale(1.2); }
+  55%  { opacity: 1; transform: scale(1.0); }
+  80%  { opacity: 1; transform: scale(1.0); }
+  100% { opacity: 0; transform: scale(1.1); }
+}
+
+/* ── SCREENSHOT MODAL ── */
+#ss-modal {
+  display: none;
+  position: fixed; inset: 0; z-index: 300;
+  background: rgba(0,0,0,0.75);
+  overflow-y: auto;
+  padding: 14px;
+}
+#ss-modal.on { display: block; }
+#ss-card {
+  background: #1a1a1a;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  max-width: 480px;
+  margin: 0 auto;
+}
+.ss-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  padding-bottom: 12px;
+  margin-bottom: 12px;
+}
+.ss-proj { font-size: 15px; font-weight: 500; color: var(--text-primary); }
+.ss-sub { font-size: 11px; color: var(--text-secondary); margin-top: 3px; font-family: var(--mono); }
+.ss-close-btn {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-secondary);
+  font-size: 12px;
+  padding: 4px 10px;
+  cursor: pointer;
+}
+.ss-table { width: 100%; border-collapse: collapse; font-size: 12px; table-layout: fixed; }
+.ss-table th {
+  background: var(--bg2);
+  padding: 6px 7px;
+  text-align: left;
+  font-weight: 500;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border-md);
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.ss-table td {
+  padding: 7px 7px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+  color: var(--text-primary);
+}
+.ss-table tr:last-child td { border-bottom: none; }
+.ss-thumb { width: 36px; height: 24px; border-radius: 3px; object-fit: cover; border: 1px solid var(--border); }
+.ss-tip { font-size: 11px; color: var(--text-hint); text-align: center; margin-top: 12px; font-family: var(--mono); }
+.ss-export-btn {
+  width: 100%;
+  background: var(--green);
+  border: none;
+  border-radius: var(--radius);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: var(--mono);
+  letter-spacing: 0.05em;
+  padding: 10px;
+  cursor: pointer;
+  margin-top: 10px;
+}
+.ss-export-btn:active { opacity: 0.8; }
+</style>
+</head>
+<body>
+
+<div id="flash-overlay"><div id="flash-icon"></div></div>
+
+<div id="ss-modal">
+  <div id="ss-card">
+    <div class="ss-head">
+      <div>
+        <div class="ss-proj" id="ss-proj">—</div>
+        <div class="ss-sub" id="ss-sub">—</div>
+      </div>
+      <button class="ss-close-btn" onclick="closeModal()">✕ 關閉</button>
+    </div>
+    <table class="ss-table">
+      <thead>
+        <tr>
+          <th style="width:28px">#</th>
+          <th style="width:40px">Roll</th>
+          <th style="width:72px">TC</th>
+          <th style="width:36px">PPT</th>
+          <th style="width:44px">照片</th>
+          <th>類型</th>
+          <th>備註</th>
+        </tr>
+      </thead>
+      <tbody id="ss-tbody"></tbody>
+    </table>
+    <div class="ss-tip">長按畫面截圖 → 傳後製</div>
+    <button class="ss-export-btn" onclick="exportCSV()">↓ 匯出 CSV</button>
+  </div>
+</div>
+
+<div id="header">
+  <div class="logo">DT 攝影棚<span>場記管理系統</span></div>
+  <div class="sep"></div>
+  <div class="title-text">場記表</div>
+  <div class="spacer"></div>
+  <div class="date-tag" id="date-tag">—</div>
+</div>
+
+<div id="app">
+
+  <!-- TIMER CARD -->
+  <div class="card">
+    <div class="timer-row">
+      <div id="timer">00:00:00</div>
+      <button class="roll-btn" onclick="startTimer()">▶ ROLL</button>
+      <button class="stop-btn" onclick="stopTimer()">■ STOP</button>
+    </div>
+    <div class="meta-grid">
+      <div class="field">
+        <label>專案名稱</label>
+        <input id="proj" placeholder="Webinar 標題">
+      </div>
+      <div class="field">
+        <label>講者</label>
+        <input id="spk" placeholder="姓名">
+      </div>
+    </div>
+  </div>
+
+  <!-- NG FORM CARD -->
+  <div class="card">
+    <div class="card-label">記錄 NG</div>
+
+    <!-- TYPE SELECT -->
+    <div class="type-grid" id="type-grid">
+      <button class="tbtn t0" id="ty0" onclick="pickType(0)">
+        <span class="ticon">🔄</span>重來
+      </button>
+      <button class="tbtn t1" id="ty1" onclick="pickType(1)">
+        <span class="ticon">🖥</span>PPT調整
+      </button>
+      <button class="tbtn t2" id="ty2" onclick="pickType(2)">
+        <span class="ticon">🎙</span>Mic雜音
+      </button>
+      <button class="tbtn t3" id="ty3" onclick="pickType(3)">
+        <span class="ticon">🚨</span>現場狀況
+      </button>
+    </div>
+
+    <!-- ROLL + TC -->
+    <div class="fields-2">
+      <div class="field">
+        <label>檔號 Roll</label>
+        <input id="f-roll" type="number" min="1" placeholder="Roll #">
+      </div>
+      <div class="field">
+        <label>Timecode</label>
+        <div class="tc-wrap">
+          <input id="f-tc" placeholder="00:00:00">
+          <button class="grab-btn" onclick="grabTC()" aria-label="抓取時間">⏱</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- PPT PAGE + PHOTO -->
+    <div class="fields-2" style="margin-bottom:8px">
+      <div class="field">
+        <label>PPT 頁數</label>
+        <input id="f-ppt" type="number" min="1" placeholder="第 ? 頁">
+      </div>
+      <div class="field">
+        <label>PPT 照片</label>
+        <div class="photo-box" id="photo-box" onclick="document.getElementById('photo-input').click()">
+          <div class="ph-placeholder">
+            <span class="ph-icon">📷</span>
+            <span>拍照 / 選圖</span>
+          </div>
+        </div>
+        <input type="file" id="photo-input" accept="image/*" capture="environment" onchange="onPhoto(event)">
+      </div>
+    </div>
+
+    <input class="note-inp" id="f-note" placeholder="備註（選填）">
+    <button class="rec-btn" onclick="addNG()">⚡ 記錄 NG</button>
+  </div>
+
+  <!-- LOG CARD -->
+  <div class="card">
+    <div class="log-hdr">
+      <span class="log-count" id="log-count">NG 紀錄 0 筆</span>
+      <button class="hbtn orange" onclick="openModal()">📷 截圖</button>
+      <button class="hbtn orange" onclick="exportCSV()">↓ 匯出</button>
+      <button class="hbtn" onclick="clearAll()">清空</button>
+    </div>
+    <div id="log-list"><div class="log-empty">— 尚無紀錄 —</div></div>
+  </div>
+
+</div><!-- /app -->
+
+<script>
+const TYPES = ['重來','PPT調整','Mic雜音','現場狀況'];
+const FLASH_ICONS = ['🔄','🖥','🎙','🚨'];
+const BADGE_CLS = ['lb0','lb1','lb2','lb3'];
+const SS_BADGE_COLORS = [
+  'background:#3a2e0a;color:#d4a843;border:1px solid rgba(184,122,18,.4)',
+  'background:#3a1212;color:#e06b6a;border:1px solid rgba(192,57,43,.4)',
+  'background:#0e1e2e;color:#7ab0e0;border:1px solid rgba(26,92,140,.4)',
+  'background:#1e1e1e;color:#888885;border:1px solid rgba(74,85,104,.4)',
+];
+
+let elapsed = 0, running = false, tint = null;
+let logs = [], selType = 0, photoData = null;
+
+function pad(n){ return String(n).padStart(2,'0') }
+function s2tc(s){ return pad(Math.floor(s/3600))+':'+pad(Math.floor(s%3600/60))+':'+pad(s%60) }
+
+// Date header
+const now = new Date();
+document.getElementById('date-tag').textContent =
+  now.toLocaleDateString('zh-TW',{year:'numeric',month:'2-digit',day:'2-digit',weekday:'short'});
+
+// Timer
+function startTimer(){
+  if(running) return;
+  running = true;
+  document.getElementById('timer').classList.add('on');
+  tint = setInterval(()=>{ elapsed++; document.getElementById('timer').textContent = s2tc(elapsed); }, 1000);
+}
+function stopTimer(){
+  if(!running) return;
+  running = false;
+  clearInterval(tint);
+  elapsed = 0;
+  document.getElementById('timer').textContent = '00:00:00';
+  document.getElementById('timer').classList.remove('on');
+}
+function grabTC(){
+  document.getElementById('f-tc').value = s2tc(elapsed);
+}
+
+// Type select
+function pickType(i){
+  selType = i;
+  for(let j=0;j<4;j++){
+    const b = document.getElementById('ty'+j);
+    if(j===i){ b.classList.remove('unsel'); }
+    else { b.classList.add('unsel'); }
+  }
+}
+pickType(0); // default 重來
+
+// Photo
+function onPhoto(e){
+  const f = e.target.files[0]; if(!f) return;
+  const r = new FileReader();
+  r.onload = ev => {
+    photoData = ev.target.result;
+    document.getElementById('photo-box').innerHTML = '<img src="'+photoData+'" alt="PPT">';
+  };
+  r.readAsDataURL(f);
+}
+
+// Flash
+function fireFlash(type){
+  const ov = document.getElementById('flash-overlay');
+  const ic = document.getElementById('flash-icon');
+  ic.textContent = FLASH_ICONS[type];
+  ov.classList.remove('fire');
+  void ov.offsetWidth;
+  ov.classList.add('fire');
+  setTimeout(()=>ov.classList.remove('fire'), 700);
+}
+
+// Add NG
+function addNG(){
+  const tc   = document.getElementById('f-tc').value.trim() || s2tc(elapsed);
+  const roll = document.getElementById('f-roll').value.trim();
+  const ppt  = document.getElementById('f-ppt').value.trim();
+  const note = document.getElementById('f-note').value.trim();
+  logs.unshift({ tc, roll, ppt, note, type: selType, photo: photoData, id: Date.now() });
+  // reset
+  document.getElementById('f-tc').value = '';
+  document.getElementById('f-ppt').value = '';
+  document.getElementById('f-note').value = '';
+  photoData = null;
+  document.getElementById('photo-box').innerHTML =
+    '<div class="ph-placeholder"><span class="ph-icon">📷</span><span>拍照 / 選圖</span></div>';
+  document.getElementById('photo-input').value = '';
+  fireFlash(selType);
+  renderLogs();
+}
+
+function delLog(id){ logs = logs.filter(l=>l.id!==id); renderLogs(); }
+function clearAll(){
+  if(logs.length && confirm('確定清空所有 NG 紀錄？')) logs = [];
+  renderLogs();
+}
+
+function renderLogs(){
+  document.getElementById('log-count').textContent = 'NG 紀錄 '+logs.length+' 筆';
+  const el = document.getElementById('log-list');
+  if(!logs.length){ el.innerHTML='<div class="log-empty">— 尚無紀錄 —</div>'; return; }
+  el.innerHTML = logs.map((l,i)=>`
+    <div class="log-item">
+      <span class="log-num">#${logs.length-i}</span>
+      <div class="log-main">
+        <div class="log-top">
+          ${l.roll ? `<span class="log-roll">R${l.roll}</span>` : ''}
+          <span class="log-tc">${l.tc}</span>
+          ${l.ppt ? `<span class="log-ppt">p.${l.ppt}</span>` : ''}
+          <span class="log-badge ${BADGE_CLS[l.type]}">${TYPES[l.type]}</span>
+          ${l.photo ? `<img class="log-thumb" src="${l.photo}" alt="PPT">` : ''}
+        </div>
+        ${l.note ? `<div class="log-note">${l.note}</div>` : ''}
+      </div>
+      <button class="del-btn" onclick="delLog(${l.id})" aria-label="刪除">✕</button>
+    </div>
+  `).join('');
+}
+
+// Screenshot modal
+function openModal(){
+  const proj = document.getElementById('proj').value || '未命名專案';
+  const spk  = document.getElementById('spk').value;
+  const date = now.toLocaleDateString('zh-TW');
+  document.getElementById('ss-proj').textContent = proj;
+  document.getElementById('ss-sub').textContent =
+    (spk?'講者：'+spk+'　':'') + '日期：'+date + '　共 '+logs.length+' 筆 NG';
+  const tbody = document.getElementById('ss-tbody');
+  tbody.innerHTML = [...logs].reverse().map((l,i)=>`
+    <tr>
+      <td style="color:#555;font-family:monospace">${i+1}</td>
+      <td style="font-family:monospace;color:#d4711a">${l.roll?'R'+l.roll:'-'}</td>
+      <td style="font-family:monospace;font-weight:500">${l.tc}</td>
+      <td style="font-family:monospace">${l.ppt?'p.'+l.ppt:'-'}</td>
+      <td>${l.photo?`<img class="ss-thumb" src="${l.photo}" alt="">`:'—'}</td>
+      <td><span style="font-size:11px;padding:1px 7px;border-radius:20px;${SS_BADGE_COLORS[l.type]}">${TYPES[l.type]}</span></td>
+      <td style="color:#666;font-size:11px">${l.note||'-'}</td>
+    </tr>
+  `).join('');
+  document.getElementById('ss-modal').classList.add('on');
+}
+function closeModal(){ document.getElementById('ss-modal').classList.remove('on'); }
+
+// CSV export
+function exportCSV(){
+  const proj = document.getElementById('proj').value || '場記';
+  const spk  = document.getElementById('spk').value || '';
+  const date = now.toLocaleDateString('zh-TW');
+  let csv = '\uFEFF專案,'+proj+'\n講者,'+spk+'\n日期,'+date+'\n\n#,Roll,Timecode,PPT頁數,NG類型,備註\n';
+  [...logs].reverse().forEach((l,i)=>{
+    csv += `${i+1},${l.roll?'R'+l.roll:'-'},${l.tc},${l.ppt?'p.'+l.ppt:'-'},${TYPES[l.type]},"${l.note||''}"\n`;
+  });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
+  a.download = proj+'_場記_'+date.replace(/\//g,'-')+'.csv';
+  a.click();
+}
+
+renderLogs();
+</script>
+</body>
+</html>
