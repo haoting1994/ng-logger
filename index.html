@@ -87,11 +87,12 @@ html, body { height: 100%; background: var(--bg0); color: var(--text-primary); f
   padding: 12px;
 }
 .card-label {
-  font-size: 10px;
-  letter-spacing: 0.1em;
+  font-size: 11px;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--text-hint);
+  color: #a8a8a5;
   font-family: var(--mono);
+  font-weight: 500;
   margin-bottom: 10px;
 }
 
@@ -141,7 +142,7 @@ input, select, textarea { font-size: 16px !important; }
 /* ── META GRID ── */
 .meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-top: 10px; }
 .field { display: flex; flex-direction: column; gap: 4px; }
-.field label { font-size: 10px; letter-spacing: 0.06em; color: var(--text-hint); font-family: var(--mono); text-transform: uppercase; }
+.field label { font-size: 11px; letter-spacing: 0.05em; color: #a8a8a5; font-family: var(--mono); text-transform: uppercase; font-weight: 500; }
 .field input {
   background: var(--bg2);
   border: 1px solid var(--border);
@@ -156,6 +157,26 @@ input, select, textarea { font-size: 16px !important; }
 }
 .field input:focus { border-color: var(--border-md); }
 .field input::placeholder { color: var(--text-hint); }
+
+/* Timecode field — green accent */
+.tc-field-wrap { display: flex; flex-direction: column; gap: 4px; }
+.tc-field-wrap label { font-size: 11px; letter-spacing: 0.05em; color: #5ecf80; font-family: var(--mono); text-transform: uppercase; font-weight: 500; }
+.tc-inner { display: flex; gap: 4px; }
+.tc-inner input {
+  flex: 1;
+  background: #0d2218;
+  border: 1px solid #2d6e4a;
+  border-radius: var(--radius);
+  color: #5ecf80;
+  font-family: var(--mono);
+  font-size: 16px;
+  font-weight: 500;
+  padding: 7px 9px;
+  outline: none;
+  letter-spacing: 0.05em;
+}
+.tc-inner input:focus { border-color: #4db87a; }
+.tc-inner input::placeholder { color: #2d6e4a; }
 
 /* ── NG TYPE BUTTONS ── */
 .type-grid { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 6px; margin-bottom: 10px; }
@@ -350,6 +371,15 @@ input, select, textarea { font-size: 16px !important; }
   100% { opacity: 0; transform: scale(1.1); }
 }
 
+/* picker inputs */
+#session-picker input {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--radius); color: var(--text-primary);
+  font-size: 16px; padding: 8px 10px; outline: none; display: block; width: 100%;
+}
+#session-picker input::placeholder { color: var(--text-hint); }
+#session-picker.on { display: block !important; }
+
 body { position: relative; }
 #ss-modal {
   display: none;
@@ -431,6 +461,30 @@ body { position: relative; }
 </head>
 <body>
 
+<!-- SESSION PICKER MODAL -->
+<div id="session-picker" style="display:none;position:fixed;inset:0;z-index:400;background:rgba(0,0,0,0.85);padding:16px;overflow-y:auto;">
+  <div style="background:var(--bg1);border:1px solid var(--border-md);border-radius:var(--radius-lg);padding:16px;max-width:480px;margin:20px auto;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;border-bottom:1px solid var(--border);padding-bottom:12px">
+      <div>
+        <div style="font-size:15px;font-weight:500;color:var(--text-primary)">選擇場次</div>
+        <div style="font-size:11px;color:var(--text-secondary);font-family:var(--mono);margin-top:2px" id="picker-date">—</div>
+      </div>
+      <button onclick="document.getElementById('session-picker').classList.remove('on')"
+        style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);color:var(--text-secondary);font-size:12px;padding:5px 10px;cursor:pointer">✕ 關閉</button>
+    </div>
+    <div id="session-list" style="margin-bottom:12px"></div>
+    <div style="border-top:1px solid var(--border);padding-top:12px">
+      <div style="font-size:11px;color:var(--text-hint);margin-bottom:8px;font-family:var(--mono)">── 建立新場次 ──</div>
+      <input id="picker-proj" placeholder="專案名稱" style="width:100%;margin-bottom:6px">
+      <input id="picker-spk"  placeholder="講者" style="width:100%;margin-bottom:10px">
+      <button onclick="createFromPicker()"
+        style="width:100%;background:var(--green);border:none;border-radius:var(--radius);color:#fff;font-size:14px;font-weight:500;padding:11px;cursor:pointer;font-family:var(--mono)">
+        ＋ 開始新場次
+      </button>
+    </div>
+  </div>
+</div>
+
 <div id="flash-overlay"><div id="flash-icon"></div></div>
 <div id="lightbox" onclick="closeLightbox()"><img id="lightbox-img" src="" alt="PPT 大圖"></div>
 
@@ -469,6 +523,7 @@ body { position: relative; }
     <div class="title-text">場記表</div>
     <div class="spacer"></div>
     <div id="sync-status" style="font-family:var(--mono);font-size:10px;color:var(--text-hint);max-width:90px;text-align:right;line-height:1.3;">連線中…</div>
+    <button onclick="openPicker()" style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);color:var(--orange);font-size:11px;padding:4px 9px;cursor:pointer;font-family:var(--mono);white-space:nowrap">⇄ 場次</button>
     <div class="date-tag" id="date-tag">—</div>
   </div>
 </div>
@@ -567,7 +622,7 @@ body { position: relative; }
 
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, query, orderBy }
+import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, query, orderBy, getDocs }
   from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
 const firebaseConfig = {
@@ -662,24 +717,78 @@ function fireFlash(type){
   setTimeout(()=>ov.classList.remove('fire'), 700);
 }
 
-// ── FIRESTORE SYNC — 自動以日期為 session ────────────────────
-// session key = "YYYY-MM-DD"，同一天 iPad + PC 自動共享同一份資料
-const SESSION_ID = now.toISOString().slice(0,10); // e.g. "2026-05-11"
+// ── FIRESTORE SYNC — 專案為 session key ──────────────────────
+// Structure: ng-sessions/{YYYY-MM-DD}/{sessionId}/logs/{id}
+// sessionId = sanitised project name, stored with proj+spk metadata
+
+const TODAY = now.toISOString().slice(0,10); // "2026-05-12"
+let SESSION_ID = ''; // set when user enters proj name or picks from list
+let unsubListener = null;
 
 function setStatus(msg){
   const el = document.getElementById('sync-status');
   if(el) el.textContent = msg;
 }
 
-// Start listening immediately on page load
-function startSync(){
+function sanitize(str){ return str.trim().replace(/[^a-zA-Z0-9\u4e00-\u9fa5_-]/g,'_').slice(0,40) || 'unnamed'; }
+
+// ── SESSION PICKER (shown on PC / when no active session) ────
+async function openPicker(){
+  document.getElementById('picker-date').textContent = TODAY;
+  await loadSessionPicker();
+}
+
+async function createFromPicker(){
+  const proj = document.getElementById('picker-proj').value.trim();
+  const spk  = document.getElementById('picker-spk').value.trim();
+  if(!proj){ alert('請輸入專案名稱'); return; }
+  document.getElementById('proj').value = proj;
+  document.getElementById('spk').value  = spk;
+  document.getElementById('session-picker').classList.remove('on');
+  await startNewSession();
+}
+
+async function loadSessionPicker(){
+  const snap = await getDocs(collection(db, 'ng-sessions', TODAY, '__meta__')).catch(()=>null);
+  const sessions = snap ? snap.docs.map(d=>d.data()) : [];
+  const list = document.getElementById('session-list');
+  if(sessions.length === 0){
+    list.innerHTML = '<div style="color:var(--text-hint);font-size:13px;text-align:center;padding:12px 0">今天尚無場次紀錄</div>';
+  } else {
+    list.innerHTML = sessions
+      .sort((a,b)=>(b.createdAt||0)-(a.createdAt||0))
+      .map(s=>`
+        <button onclick="selectSession('${s.id}','${s.proj}','${s.spk||''}')"
+          style="width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);
+                 padding:10px 12px;text-align:left;cursor:pointer;margin-bottom:6px;color:var(--text-primary);display:block">
+          <div style="font-size:13px;font-weight:500;color:var(--text-primary)">${s.proj||'未命名'}</div>
+          <div style="font-size:11px;color:var(--text-secondary);margin-top:2px;font-family:var(--mono)">
+            ${s.spk?'講者：'+s.spk+'　':''}${s.count||0} 筆 NG
+          </div>
+        </button>`).join('');
+  }
+  document.getElementById('session-picker').classList.add('on');
+}
+
+function selectSession(sid, proj, spk){
+  document.getElementById('session-picker').classList.remove('on');
+  document.getElementById('proj').value = decodeURIComponent(proj)||'';
+  document.getElementById('spk').value  = decodeURIComponent(spk)||'';
+  bindSession(sid);
+}
+
+function bindSession(sid){
+  if(unsubListener){ unsubListener(); unsubListener = null; }
+  SESSION_ID = sid;
+  logs = [];
+  renderLogs();
+  if(!sid){ setStatus('未連線'); return; }
   setStatus('連線中…');
   const q = query(
-    collection(db, 'ng-sessions', SESSION_ID, 'logs'),
+    collection(db, 'ng-sessions', TODAY, sid, 'logs'),
     orderBy('id','desc')
   );
-  onSnapshot(q, snap => {
-    // Preserve local photos (not stored in Firestore)
+  unsubListener = onSnapshot(q, snap => {
     const photoMap = {};
     logs.forEach(l => { if(l.photo) photoMap[l.id] = l.photo; });
     logs = snap.docs.map(d => {
@@ -688,23 +797,45 @@ function startSync(){
       return data;
     });
     renderLogs();
-    setStatus('✓ ' + new Date().toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit'}));
-  }, err => {
-    setStatus('⚠ 離線');
-    console.error(err);
-  });
+    setStatus('✓ '+new Date().toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit'}));
+  }, err => { setStatus('⚠ 離線'); console.error(err); });
 }
-startSync();
 
-// Add NG — write to Firestore (no photo)
+async function startNewSession(){
+  const proj = document.getElementById('proj').value.trim();
+  const spk  = document.getElementById('spk').value.trim();
+  if(!proj){ alert('請先輸入專案名稱'); document.getElementById('proj').focus(); return; }
+  const sid = sanitize(proj);
+  // write metadata
+  await setDoc(doc(db, 'ng-sessions', TODAY, '__meta__', sid),
+    { id: sid, proj, spk, count: 0, createdAt: Date.now() });
+  bindSession(sid);
+  setStatus('新場次已建立');
+}
+
+async function updateMetaCount(){
+  if(!SESSION_ID) return;
+  const proj = document.getElementById('proj').value.trim();
+  const spk  = document.getElementById('spk').value.trim();
+  await setDoc(doc(db, 'ng-sessions', TODAY, '__meta__', SESSION_ID),
+    { id:SESSION_ID, proj, spk, count: logs.length, createdAt: Date.now() }, {merge:true});
+}
+
+// Add NG
 async function addNG(){
+  if(!SESSION_ID){
+    const proj = document.getElementById('proj').value.trim();
+    if(!proj){ alert('請先輸入專案名稱'); document.getElementById('proj').focus(); return; }
+    await startNewSession();
+  }
   const tc   = document.getElementById('f-tc').value.trim() || s2tc(elapsed);
   const roll = document.getElementById('f-roll').value.trim();
   const ppt  = document.getElementById('f-ppt').value.trim();
   const note = document.getElementById('f-note').value.trim();
+  const proj = document.getElementById('proj').value.trim();
+  const spk  = document.getElementById('spk').value.trim();
   const id   = Date.now();
 
-  // Reset form
   document.getElementById('f-tc').value   = '';
   document.getElementById('f-ppt').value  = '';
   document.getElementById('f-note').value = '';
@@ -716,33 +847,40 @@ async function addNG(){
 
   fireFlash(selType);
 
-  // Save text data to Firestore
   await setDoc(
-    doc(db, 'ng-sessions', SESSION_ID, 'logs', String(id)),
-    { tc, roll, ppt, note, type: selType, id,
-      proj: document.getElementById('proj').value.trim(),
-      spk:  document.getElementById('spk').value.trim() }
+    doc(db, 'ng-sessions', TODAY, SESSION_ID, 'logs', String(id)),
+    { tc, roll, ppt, note, type: selType, id, proj, spk }
   );
-  // Photo is local-only; patch after onSnapshot updates logs
+  await updateMetaCount();
+
   if(savedPhoto){
-    const match = logs.find(l => l.id === id);
-    if(match) match.photo = savedPhoto;
-    renderLogs();
+    const match = logs.find(l=>l.id===id);
+    if(match){ match.photo = savedPhoto; renderLogs(); }
   }
 }
 
 async function delLog(id){
-  await deleteDoc(doc(db, 'ng-sessions', SESSION_ID, 'logs', String(id)));
+  if(!SESSION_ID) return;
+  await deleteDoc(doc(db, 'ng-sessions', TODAY, SESSION_ID, 'logs', String(id)));
+  await updateMetaCount();
 }
 
 async function clearAll(){
   if(!logs.length) return;
-  if(!confirm('確定清空今天所有 NG 紀錄？')) return;
-  await Promise.all(logs.map(l =>
-    deleteDoc(doc(db, 'ng-sessions', SESSION_ID, 'logs', String(l.id)))
+  if(!confirm('確定清空此場次所有 NG 紀錄？')) return;
+  await Promise.all(logs.map(l=>
+    deleteDoc(doc(db, 'ng-sessions', TODAY, SESSION_ID, 'logs', String(l.id)))
   ));
+  await updateMetaCount();
 }
 
+// On load: auto-bind if proj already filled, else show picker
+window.addEventListener('DOMContentLoaded', ()=>{});
+(async ()=>{
+  const proj = document.getElementById('proj').value.trim();
+  if(proj){ await startNewSession(); }
+  else { await loadSessionPicker(); }
+})();
 
 
 function renderLogs(){
@@ -978,20 +1116,23 @@ function closeLightbox(){
 renderLogs();
 
 // expose to global for inline onclick handlers
-window.startTimer   = startTimer;
-window.stopTimer    = stopTimer;
-window.grabTC       = grabTC;
-window.pickType     = pickType;
-window.onPhoto      = onPhoto;
-window.addNG        = addNG;
-window.delLog       = delLog;
-window.clearAll     = clearAll;
-window.openModal    = openModal;
-window.closeModal   = closeModal;
-window.exportSRT    = exportSRT;
-window.exportCSV    = exportCSV;
-window.openLightbox = openLightbox;
-window.closeLightbox= closeLightbox;
+window.startTimer    = startTimer;
+window.stopTimer     = stopTimer;
+window.grabTC        = grabTC;
+window.pickType      = pickType;
+window.onPhoto       = onPhoto;
+window.addNG         = addNG;
+window.delLog        = delLog;
+window.clearAll      = clearAll;
+window.openModal     = openModal;
+window.closeModal    = closeModal;
+window.exportSRT     = exportSRT;
+window.exportCSV     = exportCSV;
+window.openLightbox  = openLightbox;
+window.closeLightbox = closeLightbox;
+window.openPicker    = openPicker;
+window.selectSession = selectSession;
+window.createFromPicker = createFromPicker;
 </script>
 </body>
 </html>
