@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>DT Studio 場記表</title>
+<title>DIGITIMES STUDIO | 場記表</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
@@ -135,6 +135,9 @@ html, body { height: 100%; background: var(--bg0); color: var(--text-primary); f
 }
 .roll-btn:active, .stop-btn:active { opacity: 0.75; }
 
+/* prevent iOS auto-zoom on input focus */
+input, select, textarea { font-size: 16px !important; }
+
 /* ── META GRID ── */
 .meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-top: 10px; }
 .field { display: flex; flex-direction: column; gap: 4px; }
@@ -144,7 +147,7 @@ html, body { height: 100%; background: var(--bg0); color: var(--text-primary); f
   border: 1px solid var(--border);
   border-radius: var(--radius);
   color: var(--text-primary);
-  font-size: 13px;
+  font-size: 16px;
   font-family: var(--sans);
   padding: 7px 9px;
   width: 100%;
@@ -227,7 +230,7 @@ html, body { height: 100%; background: var(--bg0); color: var(--text-primary); f
   border: 1px solid var(--border);
   border-radius: var(--radius);
   color: var(--text-primary);
-  font-size: 13px;
+  font-size: 16px;
   font-family: var(--sans);
   padding: 7px 9px;
   outline: none;
@@ -444,23 +447,24 @@ body { position: relative; }
       <thead>
         <tr>
           <th style="width:24px">#</th>
-          <th style="width:48px">CAM</th>
-          <th style="width:76px">Timecode</th>
-          <th style="width:40px">PPT</th>
+          <th style="width:80px">Timecode</th>
+          <th style="width:44px">PPT</th>
           <th style="width:72px">照片</th>
-          <th>NG 類型</th>
+          <th colspan="2">NG 類型</th>
         </tr>
       </thead>
       <tbody id="ss-tbody"></tbody>
     </table>
-    <div class="ss-tip">長按畫面截圖 → 傳後製</div>
-    <button class="ss-export-btn" onclick="exportCSV()">↓ 匯出 CSV</button>
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <button class="ss-export-btn" onclick="exportSRT()" style="background:var(--orange)">↓ 匯出 SRT（Premiere）</button>
+      <button class="ss-export-btn" onclick="exportCSV()" style="background:var(--green);flex:0 0 auto;width:auto;padding:10px 14px">↓ CSV</button>
+    </div>
   </div>
 </div>
 
 <div id="header">
   <div id="header-inner">
-    <div class="logo">DT 攝影棚</div>
+    <div class="logo">DIGITIMES STUDIO</div>
     <div class="sep"></div>
     <div class="title-text">場記表</div>
     <div class="spacer"></div>
@@ -550,8 +554,9 @@ body { position: relative; }
   <div class="card">
     <div class="log-hdr">
       <span class="log-count" id="log-count">NG 紀錄 0 筆</span>
-      <button class="hbtn orange" onclick="openModal()">📷 截圖</button>
-      <button class="hbtn orange" onclick="exportCSV()">↓ 匯出</button>
+      <button class="hbtn orange" onclick="openModal()">📋 截圖表</button>
+      <button class="hbtn orange" onclick="exportSRT()">↓ SRT</button>
+      <button class="hbtn" onclick="exportCSV()">↓ CSV</button>
       <button class="hbtn" onclick="clearAll()">清空</button>
     </div>
     <div id="log-list"><div class="log-empty">— 尚無紀錄 —</div></div>
@@ -686,7 +691,7 @@ function renderLogs(){
   `).join('');
 }
 
-// Screenshot modal
+// Screenshot modal — grouped by CAM
 function openModal(){
   const proj = document.getElementById('proj').value || '未命名專案';
   const spk  = document.getElementById('spk').value;
@@ -694,37 +699,108 @@ function openModal(){
   document.getElementById('ss-proj').textContent = proj;
   document.getElementById('ss-sub').textContent =
     (spk?'講者：'+spk+'　':'') + '日期：'+date + '　共 '+logs.length+' 筆 NG';
+
+  // group by roll, preserving order of first appearance (chronological)
+  const groups = {};
+  const groupOrder = [];
+  [...logs].reverse().forEach(l => {
+    const key = l.roll ? 'CAM'+l.roll : '未分組';
+    if(!groups[key]){ groups[key]=[]; groupOrder.push(key); }
+    groups[key].push(l);
+  });
+
   const tbody = document.getElementById('ss-tbody');
-  tbody.innerHTML = [...logs].reverse().map((l,i)=>`
-    <tr>
-      <td style="color:#555;font-family:monospace">${i+1}</td>
-      <td style="font-family:monospace;color:#d4711a">${l.roll?'CAM'+l.roll:'-'}</td>
-      <td style="font-family:monospace;font-weight:500">${l.tc}</td>
-      <td style="font-family:monospace">${l.ppt?'p.'+l.ppt:'-'}</td>
-      <td>${l.photo?`<img class="ss-thumb" src="${l.photo}" alt="" onclick="openLightbox('${l.photo}')">`:'—'}</td>
-      <td><span style="font-size:11px;padding:2px 8px;border-radius:20px;${SS_BADGE_COLORS[l.type]}">${TYPES[l.type]}</span></td>
-    </tr>
-  `).join('');
+  let html = '';
+  groupOrder.forEach(cam => {
+    html += `<tr><td colspan="6" style="background:rgba(212,113,26,0.15);color:#d4711a;font-family:monospace;font-size:12px;font-weight:500;padding:5px 7px;letter-spacing:0.05em;">▶ ${cam}</td></tr>`;
+    groups[cam].forEach((l,i) => {
+      html += `<tr>
+        <td style="color:#555;font-family:monospace">${i+1}</td>
+        <td style="font-family:monospace;font-weight:500">${l.tc}</td>
+        <td style="font-family:monospace">${l.ppt?'p.'+l.ppt:'-'}</td>
+        <td>${l.photo?`<img class="ss-thumb" src="${l.photo}" alt="" onclick="openLightbox('${l.photo}')">`:'—'}</td>
+        <td colspan="2"><span style="font-size:11px;padding:2px 8px;border-radius:20px;${SS_BADGE_COLORS[l.type]}">${TYPES[l.type]}</span></td>
+      </tr>`;
+    });
+  });
+  tbody.innerHTML = html;
   document.getElementById('ss-modal').classList.add('on');
 }
 function closeModal(){ document.getElementById('ss-modal').classList.remove('on'); }
 
-// CSV export
+// CSV export — grouped by CAM
 function exportCSV(){
   const proj = document.getElementById('proj').value || '場記';
   const spk  = document.getElementById('spk').value || '';
   const date = now.toLocaleDateString('zh-TW');
-  let csv = '\uFEFF專案,'+proj+'\n講者,'+spk+'\n日期,'+date+'\n\n#,CAM,Timecode,PPT頁數,NG類型,備註\n';
-  [...logs].reverse().forEach((l,i)=>{
-    csv += `${i+1},${l.roll?'CAM'+l.roll:'-'},${l.tc},${l.ppt?'p.'+l.ppt:'-'},${TYPES[l.type]},"${l.note||''}"\n`;
+
+  const groups = {};
+  const groupOrder = [];
+  [...logs].reverse().forEach(l => {
+    const key = l.roll ? 'CAM'+l.roll : '未分組';
+    if(!groups[key]){ groups[key]=[]; groupOrder.push(key); }
+    groups[key].push(l);
   });
+
+  let csv = '\uFEFF專案,' + proj + '\n講者,' + spk + '\n日期,' + date + '\n\n';
+  groupOrder.forEach(cam => {
+    csv += cam + '\n#,Timecode,PPT頁數,NG類型,備註\n';
+    groups[cam].forEach((l,i) => {
+      csv += `${i+1},${l.tc},${l.ppt?'p.'+l.ppt:'-'},${TYPES[l.type]},"${l.note||''}"\n`;
+    });
+    csv += '\n';
+  });
+
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
   a.download = proj+'_場記_'+date.replace(/\//g,'-')+'.csv';
   a.click();
 }
 
-// Lightbox
+// SRT export — one file per CAM
+function exportSRT(){
+  if(!logs.length){ alert('尚無 NG 紀錄'); return; }
+  const proj = document.getElementById('proj').value || '場記';
+  const date = now.toLocaleDateString('zh-TW').replace(/\//g,'-');
+
+  function toSRT(tc){
+    const parts = tc.split(':');
+    while(parts.length < 3) parts.unshift('00');
+    return parts.map(p=>String(p).padStart(2,'0')).join(':') + ',000';
+  }
+  function addSecs(tc, s){
+    const parts = tc.split(':').map(Number);
+    let total = (parts[0]||0)*3600 + (parts[1]||0)*60 + (parts[2]||0) + s;
+    return pad(Math.floor(total/3600))+':'+pad(Math.floor(total%3600/60))+':'+pad(total%60)+',000';
+  }
+
+  // group by CAM, chronological
+  const groups = {};
+  const groupOrder = [];
+  [...logs].reverse().forEach(l => {
+    const key = l.roll ? 'CAM'+l.roll : '未分組';
+    if(!groups[key]){ groups[key]=[]; groupOrder.push(key); }
+    groups[key].push(l);
+  });
+
+  // download one SRT per group with small delay between each
+  groupOrder.forEach((cam, gi) => {
+    setTimeout(() => {
+      let srt = '';
+      groups[cam].forEach((l, i) => {
+        const ppt  = l.ppt  ? ' p.'+l.ppt  : '';
+        const note = l.note ? ' — '+l.note  : '';
+        srt += `${i+1}\n${toSRT(l.tc)} --> ${addSecs(l.tc,3)}\n[${TYPES[l.type]}]${ppt}${note}\n\n`;
+      });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([srt],{type:'text/plain;charset=utf-8'}));
+      a.download = `${proj}_${cam}_${date}.srt`;
+      a.click();
+    }, gi * 600);
+  });
+}
+
+
 function openLightbox(src){
   document.getElementById('lightbox-img').src = src;
   document.getElementById('lightbox').classList.add('on');
