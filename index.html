@@ -728,21 +728,84 @@ function openModal(){
 }
 function closeModal(){ document.getElementById('ss-modal').classList.remove('on'); }
 
+
+// ── EXPORT HELPERS ──────────────────────────────────────────
+function isIOS(){
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+}
+
+// Download on desktop; show share sheet on iOS
+function triggerDownload(content, filename, mime){
+  if(isIOS()){
+    // iOS: use Web Share API if available, else show in-app viewer
+    const file = new File([content], filename, {type: mime});
+    if(navigator.share && navigator.canShare && navigator.canShare({files:[file]})){
+      navigator.share({ files:[file], title: filename })
+        .catch(()=> showExportViewer(content, filename));
+    } else {
+      showExportViewer(content, filename);
+    }
+  } else {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([content],{type:mime+';charset=utf-8'}));
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+  }
+}
+
+// In-app viewer for iOS fallback — shows content in a modal with copy button
+function showExportViewer(content, filename){
+  let viewer = document.getElementById('export-viewer');
+  if(!viewer){
+    viewer = document.createElement('div');
+    viewer.id = 'export-viewer';
+    viewer.style.cssText = 'position:fixed;inset:0;z-index:900;background:rgba(0,0,0,0.88);display:flex;flex-direction:column;padding:16px;gap:10px;';
+    viewer.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span id="ev-filename" style="font-family:monospace;font-size:13px;color:#d4711a"></span>
+        <button onclick="document.getElementById('export-viewer').style.display='none'"
+          style="background:#333;border:1px solid #555;color:#ccc;border-radius:6px;padding:5px 12px;font-size:13px;cursor:pointer">✕ 關閉</button>
+      </div>
+      <button id="ev-copy"
+        style="background:#1D9E75;border:none;color:#fff;border-radius:6px;padding:10px;font-size:14px;font-weight:500;cursor:pointer">
+        複製全部內容
+      </button>
+      <textarea id="ev-content" readonly
+        style="flex:1;background:#1c1d1f;border:1px solid #333;border-radius:6px;color:#e8e8e6;font-family:monospace;font-size:12px;padding:10px;resize:none;-webkit-user-select:text;user-select:text;"></textarea>
+      <p style="font-size:11px;color:#666;text-align:center">複製後貼到記事本，存成 .srt 或 .csv 檔</p>`;
+    document.body.appendChild(viewer);
+    document.getElementById('ev-copy').onclick = ()=>{
+      const ta = document.getElementById('ev-content');
+      ta.select(); ta.setSelectionRange(0,99999);
+      navigator.clipboard ? navigator.clipboard.writeText(ta.value).then(()=>{
+        document.getElementById('ev-copy').textContent='✓ 已複製！';
+        setTimeout(()=>document.getElementById('ev-copy').textContent='複製全部內容',2000);
+      }) : document.execCommand('copy');
+    };
+  }
+  document.getElementById('ev-filename').textContent = filename;
+  document.getElementById('ev-content').value = content;
+  viewer.style.display = 'flex';
+}
+
 // CSV export — grouped by CAM
 function exportCSV(){
+  if(!logs.length){ alert('尚無 NG 紀錄'); return; }
   const proj = document.getElementById('proj').value || '場記';
   const spk  = document.getElementById('spk').value || '';
   const date = now.toLocaleDateString('zh-TW');
 
-  const groups = {};
-  const groupOrder = [];
+  const groups = {}, groupOrder = [];
   [...logs].reverse().forEach(l => {
     const key = l.roll ? 'CAM'+l.roll : '未分組';
     if(!groups[key]){ groups[key]=[]; groupOrder.push(key); }
     groups[key].push(l);
   });
 
-  let csv = '\uFEFF專案,' + proj + '\n講者,' + spk + '\n日期,' + date + '\n\n';
+  let csv = '專案,' + proj + '\n講者,' + spk + '\n日期,' + date + '\n\n';
   groupOrder.forEach(cam => {
     csv += cam + '\n#,Timecode,PPT頁數,NG類型,備註\n';
     groups[cam].forEach((l,i) => {
@@ -751,10 +814,7 @@ function exportCSV(){
     csv += '\n';
   });
 
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
-  a.download = proj+'_場記_'+date.replace(/\//g,'-')+'.csv';
-  a.click();
+  triggerDownload(csv, proj+'_場記_'+date.replace(/\//g,'-')+'.csv', 'text/csv');
 }
 
 // SRT export — one file per CAM
@@ -774,31 +834,60 @@ function exportSRT(){
     return pad(Math.floor(total/3600))+':'+pad(Math.floor(total%3600/60))+':'+pad(total%60)+',000';
   }
 
-  // group by CAM, chronological
-  const groups = {};
-  const groupOrder = [];
+  const groups = {}, groupOrder = [];
   [...logs].reverse().forEach(l => {
     const key = l.roll ? 'CAM'+l.roll : '未分組';
     if(!groups[key]){ groups[key]=[]; groupOrder.push(key); }
     groups[key].push(l);
   });
 
-  // download one SRT per group with small delay between each
-  groupOrder.forEach((cam, gi) => {
-    setTimeout(() => {
-      let srt = '';
-      groups[cam].forEach((l, i) => {
-        const ppt  = l.ppt  ? ' p.'+l.ppt  : '';
-        const note = l.note ? ' — '+l.note  : '';
-        srt += `${i+1}\n${toSRT(l.tc)} --> ${addSecs(l.tc,3)}\n[${TYPES[l.type]}]${ppt}${note}\n\n`;
-      });
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(new Blob([srt],{type:'text/plain;charset=utf-8'}));
-      a.download = `${proj}_${cam}_${date}.srt`;
-      a.click();
-    }, gi * 600);
-  });
+  if(isIOS()){
+    // iOS: if multiple CAMs, ask which one; else export directly
+    if(groupOrder.length === 1){
+      const cam = groupOrder[0];
+      triggerDownload(buildSRT(groups[cam], addSecs, toSRT), `${proj}_${cam}_${date}.srt`, 'text/plain');
+    } else {
+      // show picker
+      const choice = prompt('有多個 CAM，輸入要匯出的 CAM 號（或輸入 all 全部合併）:\n'+groupOrder.join(', '));
+      if(!choice) return;
+      if(choice.trim().toLowerCase()==='all'){
+        let all = '';
+        let idx = 1;
+        groupOrder.forEach(cam=>{
+          groups[cam].forEach(l=>{
+            const ppt=l.ppt?' p.'+l.ppt:''; const note=l.note?' — '+l.note:'';
+            all+=`${idx}\n${toSRT(l.tc)} --> ${addSecs(l.tc,3)}\n[${TYPES[l.type]}] ${cam}${ppt}${note}\n\n`;
+            idx++;
+          });
+        });
+        triggerDownload(all, `${proj}_ALL_${date}.srt`, 'text/plain');
+      } else {
+        const key = groupOrder.find(k=>k.toLowerCase().includes(choice.toLowerCase()));
+        if(!key){ alert('找不到 '+choice); return; }
+        triggerDownload(buildSRT(groups[key], addSecs, toSRT), `${proj}_${key}_${date}.srt`, 'text/plain');
+      }
+    }
+  } else {
+    // Desktop: download all CAMs with delay
+    groupOrder.forEach((cam, gi) => {
+      setTimeout(()=>{
+        triggerDownload(buildSRT(groups[cam], addSecs, toSRT), `${proj}_${cam}_${date}.srt`, 'text/plain');
+      }, gi * 700);
+    });
+  }
 }
+
+function buildSRT(entries, addSecs, toSRT){
+  let srt = '';
+  entries.forEach((l, i) => {
+    const ppt  = l.ppt  ? ' p.'+l.ppt  : '';
+    const note = l.note ? ' — '+l.note  : '';
+    srt += `${i+1}\n${toSRT(l.tc)} --> ${addSecs(l.tc,3)}\n[${TYPES[l.type]}]${ppt}${note}\n\n`;
+  });
+  return srt;
+}
+
+
 
 
 function openLightbox(src){
