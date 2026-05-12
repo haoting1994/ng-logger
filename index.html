@@ -4,6 +4,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="color-scheme" content="dark">
+<meta name="supported-color-schemes" content="dark">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#222426">
 <title>DT STUDIO | 場記表</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
@@ -38,8 +43,10 @@
   --sans: 'Noto Sans TC', sans-serif;
 }
 
+html { color-scheme: dark; }
+
 - { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-  html, body { height: 100%; background: var(–bg0); color: var(–text-primary); font-family: var(–sans); font-size: 14px; overscroll-behavior: none; }
+  html, body { height: 100%; background: var(–bg0) !important; color: var(–text-primary); font-family: var(–sans); font-size: 14px; overscroll-behavior: none; }
 
 /* ── HEADER ── */
 #header {
