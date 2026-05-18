@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#222426">
-<title>Tofu Lab | 行動場記表</title>
+<title>TOFU LAB | 行動場記表</title>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -17,7 +17,7 @@ html,body{min-height:100%;background:#222426!important;color:#e8e8e6!important;f
 
 /* HEADER */
 #hdr{background:#2c2e31!important;border-bottom:1px solid rgba(255,255,255,.10);position:sticky;top:0;z-index:50}
-#hdr-in{max-width:560px;margin:0 auto;padding:10px 14px;display:flex;align-items:center;gap:8px}
+#hdr-in{max-width:560px;margin:0 auto;padding:10px 14px;display:flex;align-items:center;gap:8px;flex-wrap:nowrap;overflow:hidden}
 .logo{font-family:var(--mono);font-size:14px;color:#d4711a;font-weight:500;letter-spacing:.04em}
 .sep{width:1px;height:18px;background:rgba(255,255,255,.18);align-self:center}
 .title-txt{font-size:14px;font-weight:500;color:#e8e8e6}
@@ -26,7 +26,7 @@ html,body{min-height:100%;background:#222426!important;color:#e8e8e6!important;f
 #sync-dot.ok{background:#3a7d44}
 #sync-dot.err{background:#c0392b}
 .hdr-btn{background:#363739!important;border:1px solid rgba(255,255,255,.12)!important;border-radius:6px;color:#d4711a!important;font-size:11px;font-family:var(--mono);padding:4px 9px;cursor:pointer;-webkit-appearance:none;white-space:nowrap}
-.date-chip{font-family:var(--mono);font-size:11px;color:#888885;background:#363739;border:1px solid rgba(255,255,255,.10);border-radius:4px;padding:3px 8px;white-space:nowrap}
+.date-chip{font-family:var(--mono);font-size:11px;color:#888885;background:#363739;border:1px solid rgba(255,255,255,.10);border-radius:4px;padding:3px 8px;white-space:nowrap;flex-shrink:0}
 
 /* APP */
 #app{padding:10px 14px 30px;display:flex;flex-direction:column;gap:8px;max-width:560px;margin:0 auto}
@@ -82,6 +82,7 @@ html,body{min-height:100%;background:#222426!important;color:#e8e8e6!important;f
 .tbtn.t1{border-color:rgba(255,255,255,.6)!important;color:#e8e8e6!important;background:rgba(255,255,255,.08)!important}
 .tbtn.t2{border-color:#185fa5!important;color:#7ab0e0!important;background:rgba(26,92,140,.2)!important}
 .tbtn.t3{border-color:#5f5e5a!important;color:#9a9993!important;background:rgba(74,85,104,.2)!important}
+.tbtn.t4{border-color:#8b4513!important;color:#cd853f!important;background:rgba(139,69,19,.2)!important}
 .tbtn.unsel{opacity:.30!important;border-color:rgba(255,255,255,.08)!important;background:#2c2e31!important;color:#555552!important}
 
 /* PHOTO */
@@ -118,6 +119,7 @@ html,body{min-height:100%;background:#222426!important;color:#e8e8e6!important;f
 .b1{background:rgba(192,57,43,.2);color:#e06b6a;border:1px solid rgba(192,57,43,.3)}
 .b2{background:rgba(26,92,140,.2);color:#7ab0e0;border:1px solid rgba(26,92,140,.3)}
 .b3{background:rgba(74,85,104,.2);color:#888885;border:1px solid rgba(74,85,104,.3)}
+.b4{background:rgba(139,69,19,.2);color:#cd853f;border:1px solid rgba(139,69,19,.3)}
 .li-thumb{width:64px;height:44px;border-radius:4px;object-fit:cover;border:1px solid rgba(255,255,255,.10);cursor:zoom-in;display:block;margin-top:4px}
 .li-note{font-size:12px;color:#888885;font-style:italic}
 .note-inline{width:100%;background:transparent;border:none;border-bottom:1px solid rgba(255,255,255,.12);border-radius:0;color:#888885;font-size:13px;font-family:var(--sans);padding:4px 2px;outline:none;margin-top:4px;-webkit-appearance:none;font-style:italic}
@@ -144,7 +146,7 @@ html,body{min-height:100%;background:#222426!important;color:#e8e8e6!important;f
 #arch-modal{display:none;position:fixed;inset:0;z-index:300;background:rgba(0,0,0,.85);overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px}
 #arch-modal.on{display:block}
 .am-card{background:#2c2e31!important;border:1px solid rgba(255,255,255,.14);border-radius:10px;padding:16px;max-width:560px;margin:20px auto}
-.am-head{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(255,255,255,.10);padding-bottom:12px;margin-bottom:12px}
+.am-head{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(255,255,255,.10);padding-bottom:12px;margin-bottom:12px;gap:8px;flex-wrap:wrap}
 .am-title{font-size:15px;font-weight:500;color:#e8e8e6}
 .am-close{background:#363739!important;border:1px solid rgba(255,255,255,.10)!important;border-radius:6px;color:#888885!important;font-size:12px;padding:5px 10px;cursor:pointer;-webkit-appearance:none}
 
@@ -243,8 +245,13 @@ html,body{min-height:100%;background:#222426!important;color:#e8e8e6!important;f
 <div id="arch-modal">
   <div class="am-card">
     <div class="am-head">
-      <div class="am-title">📂 已儲存場次（最近3天）</div>
-      <button class="am-close" onclick="closeArchive()">✕ 關閉</button>
+      <div class="am-title">📂 場次清單</div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <input type="date" id="arch-date"
+          style="background:#363739;border:1px solid rgba(255,255,255,.15);border-radius:6px;color:#e8e8e6;font-size:13px;font-family:var(--mono);padding:5px 8px;outline:none;cursor:pointer;color-scheme:dark"
+          onchange="loadArchiveForDate(this.value)">
+        <button class="am-close" onclick="closeArchive()">✕</button>
+      </div>
     </div>
     <div id="arch-list"><div class="log-empty">載入中…</div></div>
   </div>
@@ -267,7 +274,9 @@ html,body{min-height:100%;background:#222426!important;color:#e8e8e6!important;f
 <!-- HEADER -->
 <div id="hdr">
   <div id="hdr-in">
-    <div class="title-txt" style="font-size:15px;font-weight:600">行動場記表</div>
+    <span style="font-family:var(--mono);font-size:13px;font-weight:600;color:#3dbcd4;letter-spacing:.05em">TOFU LAB</span>
+    <span style="color:rgba(255,255,255,.2);margin:0 5px">|</span>
+    <span style="font-size:13px;font-weight:400;color:#e8e8e6">行動場記表</span>
     <div class="spacer"></div>
     <div id="sync-dot" title="Firebase 同步狀態"></div>
     <button class="hdr-btn" onclick="openArchive()">場次清單</button>
@@ -293,11 +302,12 @@ html,body{min-height:100%;background:#222426!important;color:#e8e8e6!important;f
   <!-- NG FORM -->
   <div class="card">
     <div class="clabel" style="display:none">記錄 NG</div>
-    <div class="type-grid">
-      <button class="tbtn t0" id="ty0" onclick="pickType(0)"><span class="ti">⚠️</span>NG</button>
-      <button class="tbtn t1" id="ty1" onclick="pickType(1)"><span class="ti">🔄</span>重來</button>
+    <div class="type-grid" style="grid-template-columns:repeat(5,1fr)">
+      <button class="tbtn t0" id="ty0" onclick="pickType(0)"><span class="ti">✂️</span>Cut</button>
+      <button class="tbtn t1" id="ty1" onclick="pickType(1)"><span class="ti">🔄</span>Reset</button>
       <button class="tbtn t2" id="ty2" onclick="pickType(2)"><span class="ti">🎙</span>聲音狀況</button>
       <button class="tbtn t3" id="ty3" onclick="pickType(3)"><span class="ti">🖥</span>簡報調整</button>
+      <button class="tbtn t4" id="ty4" onclick="pickType(4)"><span class="ti">🚨</span>其他</button>
     </div>
     <div style="display:flex;gap:6px;margin-bottom:8px;align-items:flex-end">
       <div class="field" style="width:86px;flex-shrink:0">
@@ -360,9 +370,10 @@ const FB = {
 const db = getFirestore(initializeApp(FB));
 
 // ── CONSTANTS ─────────────────────────────────────────────────
-const TYPES    = ['NG','重來','聲音狀況','簡報調整'];
-const FLASH_IC = ['⚠️','🔄','🎙','🖥'];
-const BADGE_C  = ['b0','b1','b2','b3'];
+const TYPES    = ['Cut','Reset','聲音狀況','簡報調整','其他'  'background:rgba(139,69,19,.2);color:#cd853f;border:1px solid rgba(139,69,19,.3)',
+];
+const FLASH_IC = ['✂️','🔄','🎙','🖥','🚨'];
+const BADGE_C  = ['b0','b1','b2','b3','b4'];
 const SS_BADGE = [
   'background:rgba(184,122,18,.2);color:#d4a843;border:1px solid rgba(184,122,18,.3)',
   'background:rgba(192,57,43,.2);color:#e06b6a;border:1px solid rgba(192,57,43,.3)',
@@ -424,7 +435,7 @@ function toggleOK(){
 // ── TYPE ──────────────────────────────────────────────────────
 function pickType(i){
   selType=i;
-  for(let j=0;j<4;j++){
+  for(let j=0;j<5;j++){
     const b=document.getElementById('ty'+j);
     j===i ? b.classList.remove('unsel') : b.classList.add('unsel');
   }
@@ -464,20 +475,9 @@ function addNG(){
   photoData=null;
   document.getElementById('photo-box').innerHTML='<div class="ph-ph"><span class="phi">📷</span><span>拍照 / 選圖</span></div>';
   document.getElementById('photo-input').value='';
-  // reset OK
-  isOK=false; toggleOK(); toggleOK(); // reset visual (double toggle = off)
   isOK=false;
-  const btn=document.getElementById('ok-btn');
-  btn.style.background='#363739';btn.style.color='#888885';btn.style.borderColor='rgba(255,255,255,.15)';
-  fireFlash(selType);
-  renderLogs();
-}
-  document.getElementById('f-tc').value='';
-  document.getElementById('f-ppt').value='';
-  document.getElementById('f-note').value='';
-  photoData=null;
-  document.getElementById('photo-box').innerHTML='<div class="ph-ph"><span class="phi">📷</span><span>拍照 / 選圖</span></div>';
-  document.getElementById('photo-input').value='';
+  const okBtn=document.getElementById('ok-btn');
+  okBtn.style.background='#363739';okBtn.style.color='#888885';okBtn.style.borderColor='rgba(255,255,255,.15)';
   fireFlash(selType);
   renderLogs();
 }
@@ -544,23 +544,27 @@ async function saveSession(){
 // ── ARCHIVE MODAL ─────────────────────────────────────────────
 async function openArchive(){
   document.getElementById('arch-modal').classList.add('on');
+  // set date picker to today
+  const picker = document.getElementById('arch-date');
+  picker.value = TODAY;
+  await loadArchiveForDate(TODAY);
+}
+
+async function loadArchiveForDate(dateStr){
   const list=document.getElementById('arch-list');
   list.innerHTML='<div class="log-empty">載入中…</div>';
-  const cutoff=new Date(now);
-  cutoff.setDate(cutoff.getDate()-3);
-  const co=cutoff.toISOString().slice(0,10);
   try{
     const snap=await getDocs(collection(db,'ng-archive'));
     const sessions=snap.docs.map(d=>d.data())
-      .filter(s=>s.date&&s.date>=co)
+      .filter(s=>s.date===dateStr)
       .sort((a,b)=>b.savedAt-a.savedAt);
     if(!sessions.length){
-      list.innerHTML='<div class="log-empty">最近三天尚無儲存場次</div>';return;
+      list.innerHTML='<div class="log-empty">'+dateStr+' 無儲存場次</div>';return;
     }
     list.innerHTML=sessions.map(s=>`
       <div class="si" onclick="toggleDetail('${s.sid}',this)">
         <div class="si-title">${s.proj||'未命名'}${s.spk?' — '+s.spk:''}</div>
-        <div class="si-meta">${s.date}${s.savedTime?' '+s.savedTime:''}　${s.count||0} 筆現場紀錄　▶ 點開查看</div>
+        <div class="si-meta">${s.savedTime||''}　${s.count||0} 筆現場紀錄　▶ 點開查看</div>
       </div>
       <div class="sd" id="sd-${s.sid}"></div>
     `).join('');
@@ -712,6 +716,7 @@ window.openArchive=openArchive;window.closeArchive=closeArchive;
 window.toggleDetail=toggleDetail;window.dlSRT=dlSRT;window.dlCSV=dlCSV;
 window.openLightbox=openLightbox;window.closeLightbox=closeLightbox;
 window.updateNote=updateNote;window.toggleOK=toggleOK;
+window.loadArchiveForDate=loadArchiveForDate;
 
 renderLogs();
 </script>
