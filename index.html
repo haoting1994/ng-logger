@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#222426">
-<title>DT STUDIO | 場記表</title>
+<title>Tofu Lab | 行動場記表</title>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -120,6 +120,10 @@ html,body{min-height:100%;background:#222426!important;color:#e8e8e6!important;f
 .b3{background:rgba(74,85,104,.2);color:#888885;border:1px solid rgba(74,85,104,.3)}
 .li-thumb{width:64px;height:44px;border-radius:4px;object-fit:cover;border:1px solid rgba(255,255,255,.10);cursor:zoom-in;display:block;margin-top:4px}
 .li-note{font-size:12px;color:#888885;font-style:italic}
+.note-inline{width:100%;background:transparent;border:none;border-bottom:1px solid rgba(255,255,255,.12);border-radius:0;color:#888885;font-size:13px;font-family:var(--sans);padding:4px 2px;outline:none;margin-top:4px;-webkit-appearance:none;font-style:italic}
+.note-inline:focus{border-bottom-color:rgba(212,113,26,.6);color:#e8e8e6}
+.note-inline::placeholder{color:#444442}
+@media(min-width:768px){.note-inline{font-size:15px;padding:5px 2px}}
 .del-btn{background:none!important;border:none!important;cursor:pointer;color:#555552;font-size:15px;padding:0 2px}
 .del-btn:hover{color:#c0392b}
 
@@ -167,6 +171,67 @@ html,body{min-height:100%;background:#222426!important;color:#e8e8e6!important;f
 /* iOS EXPORT VIEWER */
 #ev-wrap{display:none;position:fixed;inset:0;z-index:950;background:rgba(0,0,0,.92);flex-direction:column;padding:16px;gap:10px}
 #ev-wrap.on{display:flex}
+
+/* ── iPad (768px+) ── */
+@media (min-width:768px){
+  #app{ max-width:640px; padding:14px 20px 40px; gap:12px; }
+  #hdr-in{ max-width:640px; padding:12px 20px; }
+  .logo{ font-size:17px; }
+  .title-txt{ font-size:17px; }
+  .date-chip{ font-size:13px; padding:4px 12px; }
+  .hdr-btn{ font-size:13px; padding:6px 14px; }
+
+  .card{ padding:16px; border-radius:14px; }
+  .clabel{ font-size:12px; margin-bottom:14px; }
+
+  #timer{ font-size:42px; letter-spacing:3px; }
+  #waveform{ height:38px; gap:4px; }
+  #waveform span{ width:5px; }
+  #waveform span:nth-child(1){ height:12px; }
+  #waveform span:nth-child(2){ height:26px; }
+  #waveform span:nth-child(3){ height:38px; }
+  #waveform span:nth-child(4){ height:26px; }
+  #waveform span:nth-child(5){ height:14px; }
+  .roll-btn,.stop-btn{ font-size:16px; padding:13px 22px; border-radius:9px; }
+
+  .field label,.tc-label{ font-size:13px; }
+  .field input,.tc-input,.note-inp{ font-size:18px!important; padding:10px 12px; border-radius:8px; }
+  .finput{ font-size:18px!important; }
+
+  .type-grid{ gap:8px; margin-bottom:14px; }
+  .tbtn{ padding:14px 4px 12px; border-radius:9px; font-size:14px; }
+  .tbtn .ti{ font-size:22px; }
+
+  .grab-btn{ width:54px!important; font-size:24px!important; border-radius:8px; }
+
+  .photo-box{ min-height:72px; border-radius:8px; }
+  .ph-ph .phi{ font-size:26px; }
+  .ph-ph{ font-size:13px; }
+
+  .rec-btn{ font-size:19px; padding:17px; border-radius:9px; letter-spacing:.10em; }
+
+  .log-cnt{ font-size:14px; }
+  .lbtn{ font-size:14px; padding:8px 16px; border-radius:8px; }
+  .li{ padding:11px 0; gap:7px; }
+  .li-num{ font-size:13px; }
+  .li-tc{ font-size:17px; }
+  .li-cam,.li-ppt{ font-size:13px; }
+  .badge{ font-size:13px; padding:2px 10px; }
+  .li-thumb{ width:90px; height:62px; border-radius:6px; }
+  .li-note{ font-size:14px; }
+  .del-btn{ font-size:19px; }
+
+  .am-card{ padding:20px; border-radius:14px; }
+  .am-title{ font-size:18px; }
+  .si{ padding:16px; border-radius:10px; }
+  .si-title{ font-size:16px; }
+  .si-meta{ font-size:13px; }
+  .ss-tbl{ font-size:14px; }
+  .ss-tbl th{ font-size:12px; padding:8px 10px; }
+  .ss-tbl td{ padding:10px 10px; }
+  .exp-btn{ font-size:15px; padding:13px; }
+  .ss-badge{ font-size:13px; padding:2px 9px; }
+}
 </style>
 </head>
 <body>
@@ -202,12 +267,10 @@ html,body{min-height:100%;background:#222426!important;color:#e8e8e6!important;f
 <!-- HEADER -->
 <div id="hdr">
   <div id="hdr-in">
-    <div class="logo">DT STUDIO</div>
-    <div class="sep"></div>
-    <div class="title-txt">場記表</div>
+    <div class="title-txt" style="font-size:15px;font-weight:600">行動場記表</div>
     <div class="spacer"></div>
     <div id="sync-dot" title="Firebase 同步狀態"></div>
-    <button class="hdr-btn" onclick="openArchive()">⇄ 場次</button>
+    <button class="hdr-btn" onclick="openArchive()">場次清單</button>
     <div class="date-chip" id="date-chip">—</div>
   </div>
 </div>
@@ -222,8 +285,8 @@ html,body{min-height:100%;background:#222426!important;color:#e8e8e6!important;f
       <button class="stop-btn" onclick="stopTimer()">■ STOP</button>
     </div>
     <div class="grid2" style="margin-top:10px">
-      <div class="field"><label>專案名稱</label><input id="proj" placeholder="Webinar 標題"></div>
-      <div class="field"><label>講者</label><input id="spk" placeholder="姓名"></div>
+      <div class="field"><label>Project</label><input id="proj" placeholder="專案名稱"></div>
+      <div class="field"><label>Speaker</label><input id="spk" placeholder="講者姓名"></div>
     </div>
   </div>
 
@@ -233,8 +296,8 @@ html,body{min-height:100%;background:#222426!important;color:#e8e8e6!important;f
     <div class="type-grid">
       <button class="tbtn t0" id="ty0" onclick="pickType(0)"><span class="ti">⚠️</span>NG</button>
       <button class="tbtn t1" id="ty1" onclick="pickType(1)"><span class="ti">🔄</span>重來</button>
-      <button class="tbtn t2" id="ty2" onclick="pickType(2)"><span class="ti">🎙</span>Mic異音</button>
-      <button class="tbtn t3" id="ty3" onclick="pickType(3)"><span class="ti">🚨</span>現場狀況</button>
+      <button class="tbtn t2" id="ty2" onclick="pickType(2)"><span class="ti">🎙</span>聲音狀況</button>
+      <button class="tbtn t3" id="ty3" onclick="pickType(3)"><span class="ti">🖥</span>簡報調整</button>
     </div>
     <div style="display:flex;gap:6px;margin-bottom:8px;align-items:flex-end">
       <div class="field" style="width:86px;flex-shrink:0">
@@ -293,8 +356,8 @@ const FB = {
 const db = getFirestore(initializeApp(FB));
 
 // ── CONSTANTS ─────────────────────────────────────────────────
-const TYPES    = ['NG','重來','Mic異音','現場狀況'];
-const FLASH_IC = ['⚠️','🔄','🎙','🚨'];
+const TYPES    = ['NG','重來','聲音狀況','簡報調整'];
+const FLASH_IC = ['⚠️','🔄','🎙','🖥'];
 const BADGE_C  = ['b0','b1','b2','b3'];
 const SS_BADGE = [
   'background:rgba(184,122,18,.2);color:#d4a843;border:1px solid rgba(184,122,18,.3)',
@@ -406,10 +469,18 @@ function renderLogs(){
           <span class="badge ${BADGE_C[l.type]}">${TYPES[l.type]}</span>
         </div>
         ${l.photo?`<img class="li-thumb" src="${l.photo}" onclick="openLightbox('${l.photo}')" alt="PPT">`:''}
-        ${l.note?`<div class="li-note">${l.note}</div>`:''}
+        <input class="note-inline" data-id="${l.id}"
+          value="${(l.note||'').replace(/"/g,'&quot;')}"
+          placeholder="＋ 備註"
+          onchange="updateNote(${l.id},this.value)">
       </div>
       <button class="del-btn" onclick="delLog(${l.id})">✕</button>
     </div>`).join('');
+}
+
+function updateNote(id, val){
+  const l = logs.find(l=>l.id===id);
+  if(l) l.note = val.trim();
 }
 
 // ── SAVE SESSION → FIRESTORE ──────────────────────────────────
@@ -529,7 +600,7 @@ function triggerDL(content,filename,mime){
     }else{showViewer(content,filename);}
   }else{
     const a=document.createElement('a');
-    a.href=URL.createObjectURL(new Blob([content],{type:mime+';charset=utf-8'}));
+    a.href=URL.createObjectURL(new Blob([content],{type:mime}));
     a.download=filename; document.body.appendChild(a); a.click();
     setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000);
   }
@@ -584,13 +655,13 @@ async function dlCSV(sid,projEnc){
   const rows=snap.docs.map(d=>d.data());
   const groups={},gOrder=[];
   rows.forEach(l=>{const k=l.roll?'CAM'+l.roll:'未分組';if(!groups[k]){groups[k]=[];gOrder.push(k);}groups[k].push(l);});
-  let csv='專案,'+proj+'\n日期,'+TODAY+'\n\n';
+  let csv='\uFEFF'+'專案,'+proj+'\n日期,'+TODAY+'\n\n';
   gOrder.forEach(cam=>{
     csv+=cam+'\n#,Timecode,PPT頁數,NG類型,備註\n';
     groups[cam].forEach((l,i)=>{csv+=`${i+1},${l.tc},${l.ppt?'p.'+l.ppt:'—'},${TYPES[l.type]},"${l.note||''}"\n`;});
     csv+='\n';
   });
-  triggerDL(csv,proj+'_場記.csv','text/csv');
+  triggerDL(csv,proj+'_場記.csv','text/csv;charset=utf-8');
 }
 
 // ── LIGHTBOX ──────────────────────────────────────────────────
@@ -604,6 +675,7 @@ window.delLog=delLog;window.clearCurrent=clearCurrent;window.saveSession=saveSes
 window.openArchive=openArchive;window.closeArchive=closeArchive;
 window.toggleDetail=toggleDetail;window.dlSRT=dlSRT;window.dlCSV=dlCSV;
 window.openLightbox=openLightbox;window.closeLightbox=closeLightbox;
+window.updateNote=updateNote;
 
 renderLogs();
 </script>
