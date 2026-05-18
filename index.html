@@ -2,1320 +2,682 @@
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>攝影棚場景管理系統</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="color-scheme" content="dark">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#222426">
+<title>Tofu Lab | 行動場記表</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --bg: #2a2a2a; --bg2: #222; --bg3: #333;
-    --border: rgba(255,255,255,0.1); --border2: rgba(255,255,255,0.2);
-    --accent: #e8720c; --accent2: #c45e08;
-    --blue: #3a8fd4; --red: #d04040;
-    --radius: 10px; --radius-sm: 6px;
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Helvetica Neue', Arial, sans-serif; background: var(--bg); color: #eee; min-height: 100vh; }
-  .app { display: flex; height: 100vh; overflow: hidden; }
-  .sidebar { width: 220px; min-width: 220px; background: var(--bg2); border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
-  .main { flex: 1; overflow-y: auto; background: var(--bg); }
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html{color-scheme:dark}
+html,body{min-height:100%;background:#222426!important;color:#e8e8e6!important;font-family:'Noto Sans TC',sans-serif;font-size:14px;overscroll-behavior:none}
+:root{--mono:'IBM Plex Mono',monospace;--sans:'Noto Sans TC',sans-serif}
 
-  .sidebar-header { padding: 16px 16px 10px; border-bottom: 1px solid var(--border); }
-  .sidebar-header h1 { font-size: 13px; font-weight: 600; color: var(--accent); letter-spacing: 0.08em; text-transform: uppercase; }
-  .sidebar-header p { font-size: 11px; color: #888; margin-top: 2px; }
-  .sync-status { font-size: 10px; margin-top: 5px; color: #888; display: flex; align-items: center; gap: 5px; }
-  .sync-dot { width: 6px; height: 6px; border-radius: 50%; background: #555; flex-shrink: 0; transition: background 0.3s; }
-  .sync-dot.online { background: #4caf50; }
-  .sync-dot.saving { background: var(--accent); animation: pulse 0.8s infinite; }
-  .sync-dot.error  { background: var(--red); }
-  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+/* HEADER */
+#hdr{background:#2c2e31!important;border-bottom:1px solid rgba(255,255,255,.10);position:sticky;top:0;z-index:50}
+#hdr-in{max-width:560px;margin:0 auto;padding:10px 14px;display:flex;align-items:center;gap:8px}
+.logo{font-family:var(--mono);font-size:14px;color:#d4711a;font-weight:500;letter-spacing:.04em}
+.sep{width:1px;height:18px;background:rgba(255,255,255,.18);align-self:center}
+.title-txt{font-size:14px;font-weight:500;color:#e8e8e6}
+.spacer{flex:1}
+#sync-dot{width:7px;height:7px;border-radius:50%;background:#444;flex-shrink:0;transition:background .3s}
+#sync-dot.ok{background:#3a7d44}
+#sync-dot.err{background:#c0392b}
+.hdr-btn{background:#363739!important;border:1px solid rgba(255,255,255,.12)!important;border-radius:6px;color:#d4711a!important;font-size:11px;font-family:var(--mono);padding:4px 9px;cursor:pointer;-webkit-appearance:none;white-space:nowrap}
+.date-chip{font-family:var(--mono);font-size:11px;color:#888885;background:#363739;border:1px solid rgba(255,255,255,.10);border-radius:4px;padding:3px 8px;white-space:nowrap}
 
-  .sidebar-search { padding: 10px 12px; border-bottom: 1px solid var(--border); }
-  .sidebar-search input { width: 100%; background: #2e2e2e; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 6px 10px; color: #ddd; font-size: 12px; outline: none; }
-  .sidebar-search input::placeholder { color: #555; }
-  .sidebar-list { flex: 1; overflow-y: auto; padding: 8px 0; }
-  .sidebar-list::-webkit-scrollbar { width: 4px; }
-  .sidebar-list::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
+/* APP */
+#app{padding:10px 14px 30px;display:flex;flex-direction:column;gap:8px;max-width:560px;margin:0 auto}
 
-  .nav-item { display: flex; align-items: center; gap: 8px; padding: 8px 14px; cursor: pointer; font-size: 12px; color: #aaa; border-left: 2px solid transparent; transition: background 0.1s, color 0.1s; position: relative; }
-  .nav-item:hover { background: rgba(255,255,255,0.06); color: #ddd; }
-  .nav-item.active { background: rgba(232,114,12,0.18); color: var(--accent); border-left-color: var(--accent); }
-  .nav-item .dot { width: 6px; height: 6px; border-radius: 50%; background: #555; flex-shrink: 0; }
-  .nav-item.active .dot { background: var(--accent); }
-  .nav-item .drag-handle { color: #555; font-size: 11px; cursor: grab; padding: 2px 3px; opacity: 0; transition: opacity 0.15s; flex-shrink: 0; }
-  .nav-item:hover .drag-handle { opacity: 1; }
-  .nav-item.drag-over { border-top: 2px solid var(--accent); }
-  .nav-item.dragging-item { opacity: 0.4; }
-  /* 分類區塊 header */
-  .nav-category { padding: 10px 14px 4px; display: flex; align-items: center; gap: 6px; user-select: none; }
-  .nav-category-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
-  .nav-category-dot.real { background: #e8720c; }
-  .nav-category-dot.green { background: #3ecf6a; }
-  .nav-category-label { font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
-  .nav-category-label.real { color: #e8720c; }
-  .nav-category-label.green { color: #3ecf6a; }
-  .nav-category-label.none { color: #555; }
-  .nav-category-dot.none { background: #444; }
-  /* drop zone highlight on category */
-  .nav-category.drop-active { background: rgba(255,255,255,0.05); border-radius: 4px; }
-  .nav-add { margin: 8px 12px; padding: 7px; border: 1px dashed #555; border-radius: var(--radius-sm); font-size: 12px; color: #777; text-align: center; cursor: pointer; transition: all 0.15s; }
-  .nav-add:hover { border-color: var(--accent); color: var(--accent); }
+/* CARD */
+.card{background:#2c2e31!important;border:1px solid rgba(255,255,255,.10);border-radius:10px;padding:12px}
+.clabel{font-size:10px;letter-spacing:.10em;text-transform:uppercase;color:#c8c8c4;font-family:var(--mono);font-weight:500;margin-bottom:10px}
 
-  .main-header { padding: 24px 28px 0; display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-  .main-header-left { flex: 1; min-width: 0; }
-  /* 節目分類標籤 */
-  .studio-badge { font-size: 9px; padding: 1px 5px; border-radius: 3px; flex-shrink: 0; font-weight: 600; letter-spacing: 0.04em; white-space: nowrap; }
-  .studio-badge.real  { background: rgba(232,114,12,0.2); color: #e8720c; border: 1px solid rgba(232,114,12,0.4); }
-  .studio-badge.green-studio { background: rgba(62,207,106,0.15); color: #3ecf6a; border: 1px solid rgba(62,207,106,0.3); }
-  /* 場景圖說欄 */
-  .scene-caption { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
-  .scene-caption input { flex: 1; background: #3a3a3a; border: 1px solid rgba(255,255,255,0.1); border-radius: var(--radius-sm); padding: 7px 12px; color: #ccc; font-size: 13px; font-family: inherit; outline: none; }
-  .scene-caption input:focus { border-color: rgba(255,255,255,0.25); }
-  .scene-caption input::placeholder { color: #555; }
-  /* 分類選擇器 — 圓點樣式 */
-  .type-sel-wrap { position: relative; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; flex-shrink: 0; padding: 4px 10px 4px 8px; border-radius: 20px; border: 1.5px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.04); transition: border-color 0.15s; }
-  .type-sel-wrap:hover { border-color: rgba(255,255,255,0.28); }
-  .type-sel-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; transition: background 0.2s; }
-  .type-sel-dot.real  { background: #e8720c; box-shadow: 0 0 5px #e8720c88; }
-  .type-sel-dot.green { background: #3ecf6a; box-shadow: 0 0 5px #3ecf6a88; }
-  .type-sel-dot.none  { background: #444; }
-  .type-sel-label { font-size: 11px; font-weight: 600; letter-spacing: 0.05em; transition: color 0.2s; }
-  .type-sel-label.real  { color: #e8720c; }
-  .type-sel-label.green { color: #3ecf6a; }
-  .type-sel-label.none  { color: #555; }
-  /* 選了棚別時外框也上色 */
-  .type-sel-wrap:has(.type-sel-dot.real)  { border-color: #e8720c66; }
-  .type-sel-wrap:has(.type-sel-dot.green) { border-color: #3ecf6a55; }
-  .type-sel-wrap select { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; }
-  .editable-title { background: none; border: none; font-size: 22px; font-weight: 600; color: #eee; font-family: inherit; outline: none; width: 100%; }
-  .editable-title:focus { border-bottom: 1px solid rgba(255,255,255,0.2); }
-  .scene-note-input { font-size: 13px; color: #888; background: none; border: none; outline: none; width: 100%; margin-top: 4px; padding: 0; font-family: inherit; }
-  .header-actions { display: flex; gap: 8px; align-items: center; flex-shrink: 0; flex-wrap: wrap; }
-  .status-sel { background: #3a3a3a; border: 1px solid rgba(255,255,255,0.15); color: #aaa; padding: 5px 10px; border-radius: 20px; font-size: 11px; outline: none; cursor: pointer; font-family: inherit; }
+/* TIMER */
+.timer-row{display:flex;align-items:center;gap:8px}
+#timer{font-family:var(--mono);font-size:30px;font-weight:500;letter-spacing:2px;color:#888885;flex:1;transition:color .3s}
+#timer.on{color:#d4711a;text-shadow:0 0 20px rgba(212,113,26,.35)}
 
-  .section-tabs { display: flex; gap: 4px; padding: 16px 28px 0; border-bottom: 1px solid rgba(255,255,255,0.08); }
-  .stab { padding: 8px 18px; font-size: 13px; color: #666; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: all 0.15s; white-space: nowrap; }
-  .stab:hover { color: #ccc; }
-  .stab.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 500; }
+/* WAVEFORM bars */
+#waveform{display:flex;align-items:center;gap:3px;height:28px;opacity:0;transition:opacity .4s;margin-right:2px}
+#waveform.on{opacity:1}
+#waveform span{display:block;width:4px;border-radius:3px;background:#d4711a;transform-origin:center}
+#waveform span:nth-child(1){animation:wave 1.0s ease-in-out infinite;height:8px}
+#waveform span:nth-child(2){animation:wave 1.0s ease-in-out infinite .15s;height:18px}
+#waveform span:nth-child(3){animation:wave 1.0s ease-in-out infinite .3s;height:26px}
+#waveform span:nth-child(4){animation:wave 1.0s ease-in-out infinite .15s;height:18px}
+#waveform span:nth-child(5){animation:wave 1.0s ease-in-out infinite .05s;height:10px}
+@keyframes wave{
+  0%,100%{transform:scaleY(1);opacity:.7}
+  50%{transform:scaleY(.3);opacity:1}
+}
+.roll-btn{background:#5db870!important;border:none;border-radius:6px;color:#fff!important;font-family:var(--mono);font-size:13px;font-weight:500;padding:9px 14px;cursor:pointer;-webkit-appearance:none;transition:background .15s}
+.roll-btn:active{background:#3a7d44!important}
+.stop-btn{background:#e05c5a!important;border:none;border-radius:6px;color:#fff!important;font-family:var(--mono);font-size:13px;font-weight:500;padding:9px 14px;cursor:pointer;-webkit-appearance:none;transition:background .15s}
+.stop-btn:active{background:#c0392b!important}
 
-  .panel { padding: 24px 28px; display: none; }
-  .panel.active { display: block; }
-  .sec-label { font-size: 11px; color: #777; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
-  .sec-label::after { content: ''; flex: 1; height: 1px; background: rgba(255,255,255,0.08); }
-  .panel-gap { margin-top: 24px; }
+/* INPUTS */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:8px}
+.field{display:flex;flex-direction:column;gap:4px}
+.field label{font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:#c8c8c4;font-family:var(--mono);font-weight:500}
+.field input{background:#363739!important;border:1px solid rgba(255,255,255,.10)!important;border-radius:6px;color:#e8e8e6!important;font-size:16px;font-family:var(--sans);padding:7px 9px;width:100%;outline:none;-webkit-appearance:none}
+.field input::placeholder{color:#555552}
 
-  /* ── GALLERY SLIDER ── */
-  .gallery-wrap { position: relative; }
-  .gallery-slider { display: flex; gap: 12px; overflow-x: auto; scroll-snap-type: x mandatory; padding: 0 0 10px; scrollbar-width: thin; scrollbar-color: #444 transparent; }
-  .gallery-slider::-webkit-scrollbar { height: 4px; }
-  .gallery-slider::-webkit-scrollbar-thumb { background: #555; border-radius: 2px; }
-  .gallery-slide { position: relative; flex-shrink: 0; width: 72%; max-width: 680px; min-width: 260px; border-radius: var(--radius); overflow: hidden; background: #3a3a3a; border: 1px solid rgba(255,255,255,0.1); scroll-snap-align: start; }
-  .gallery-slide img { width: 100%; max-height: 420px; object-fit: contain; display: block; background: #2e2e2e; }
-  .gallery-slide .slide-label { position: absolute; bottom: 0; left: 0; right: 0; padding: 6px 10px; background: rgba(0,0,0,0.55); display: flex; align-items: center; justify-content: flex-end; opacity: 0; transition: opacity 0.2s; }
-  .gallery-slide:hover .slide-label { opacity: 1; }
-  .gallery-slide .slide-label input { display: none; }
-  .gallery-slide .slide-del { background: none; border: none; color: #888; font-size: 14px; cursor: pointer; padding: 0 4px; flex-shrink: 0; }
-  .gallery-slide .slide-del:hover { color: var(--red); }
-  .gallery-slide .light-tag { position: absolute; }
-  .gallery-add-slide { flex-shrink: 0; width: 140px; min-height: 200px; border-radius: var(--radius); border: 1px dashed rgba(255,255,255,0.2); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; color: #666; font-size: 12px; cursor: pointer; transition: all 0.15s; scroll-snap-align: start; background: rgba(255,255,255,0.02); }
-  .gallery-add-slide:hover, .gallery-add-slide.drag-over { border-color: var(--accent); color: var(--accent); background: rgba(232,114,12,0.06); }
-  .gallery-add-slide span:first-child { font-size: 24px; }
-  .cam-img-zone.drag-over { border-color: var(--accent); background: rgba(232,114,12,0.06); }
-  /* Onair slides */
-  .onair-slide { position: relative; flex-shrink: 0; width: 72%; max-width: 680px; min-width: 260px; border-radius: var(--radius); overflow: hidden; background: #3a3a3a; border: 1px solid rgba(255,255,255,0.1); scroll-snap-align: start; cursor: pointer; }
-  .onair-slide img { width: 100%; max-height: 460px; object-fit: contain; display: block; background: #2e2e2e; }
-  .onair-slide .slide-label { position: absolute; bottom: 0; left: 0; right: 0; padding: 8px 12px; background: rgba(0,0,0,0.6); font-size: 12px; color: #ccc; display: flex; align-items: center; justify-content: space-between; }
-  .onair-slide .slide-label input { background: none; border: none; color: #eee; font-size: 12px; font-family: inherit; outline: none; flex: 1; min-width: 0; }
-  .onair-slide-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; color: #666; font-size: 13px; min-height: 260px; }
+/* TIMECODE field */
+.tc-field{display:flex;flex-direction:column;gap:4px}
+.tc-label{font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:#3a9d54;font-family:var(--mono);font-weight:500}
+.tc-wrap{display:flex;gap:4px}
+.tc-input{background:#0d2218!important;border:1px solid #2d6e4a!important;border-radius:6px;color:#5ecf80!important;font-size:16px;font-family:var(--mono);padding:7px 9px;flex:1;outline:none;-webkit-appearance:none}
+.tc-input::placeholder{color:#1d4a2a}
+.grab-btn{background:#0d2218!important;border:1px solid #2d6e4a!important;border-radius:6px;color:#5ecf80!important;font-size:18px;padding:0 12px;cursor:pointer;-webkit-appearance:none;display:flex;align-items:center;justify-content:center}
 
-  /* ── 平板直式 & 手機：攝影機 + 上線畫面改成垂直排列 ── */
-  @media (max-width: 900px) {
-    .gallery-slider.vertical { flex-direction: column; overflow-x: visible; scroll-snap-type: none; padding: 0; }
-    .gallery-slider.vertical .cam-slide,
-    .gallery-slider.vertical .onair-slide,
-    .gallery-slider.vertical .gallery-add-slide { width: 100%; max-width: 100%; flex-shrink: unset; scroll-snap-align: none; }
-    .gallery-slider.vertical .cam-slide img,
-    .gallery-slider.vertical .onair-slide img { max-height: none; }
-    .gallery-slider.vertical .gallery-add-slide { width: 100%; min-height: 72px; flex-direction: row; justify-content: center; gap: 10px; }
-    .gallery-slider.vertical .gallery-add-slide span:first-child { font-size: 18px; }
-  }
-  @media (max-width: 600px) {
-    .gallery-slide, .onair-slide { width: 88%; }
-    .gallery-slider.vertical .gallery-slide,
-    .gallery-slider.vertical .onair-slide { width: 100%; }
-  }
+/* TYPE BUTTONS */
+.type-grid{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px;margin-bottom:10px}
+.tbtn{border-radius:6px;border:1px solid rgba(255,255,255,.10);background:#363739!important;color:#888885;font-size:11px;font-weight:500;padding:9px 4px 8px;text-align:center;cursor:pointer;line-height:1.4;display:flex;flex-direction:column;align-items:center;gap:4px;-webkit-appearance:none}
+.tbtn .ti{font-size:16px}
+.tbtn:active{transform:scale(.96)}
+.tbtn.t0{border-color:#b87a12!important;color:#b87a12!important;background:rgba(184,122,18,.2)!important}
+.tbtn.t1{border-color:rgba(255,255,255,.6)!important;color:#e8e8e6!important;background:rgba(255,255,255,.08)!important}
+.tbtn.t2{border-color:#185fa5!important;color:#7ab0e0!important;background:rgba(26,92,140,.2)!important}
+.tbtn.t3{border-color:#5f5e5a!important;color:#9a9993!important;background:rgba(74,85,104,.2)!important}
+.tbtn.unsel{opacity:.30!important;border-color:rgba(255,255,255,.08)!important;background:#2c2e31!important;color:#555552!important}
 
-  /* ── LIGHT TAGS ── */
-  .light-tag { position: absolute; border-radius: 20px; padding: 4px 9px; display: flex; align-items: center; gap: 5px; cursor: move; user-select: none; backdrop-filter: blur(6px); box-shadow: 0 2px 8px rgba(0,0,0,0.5); transition: box-shadow 0.15s; }
-  .light-tag:hover { box-shadow: 0 3px 12px rgba(0,0,0,0.6); }
-  /* A燈 — 黃 */
-  .light-tag.c-yellow { background: rgba(26,22,0,0.82); border: 1.5px solid #e8c40c; }
-  .light-tag.c-yellow .tag-val { color: #e8c40c; }
-  /* B燈 — 藍 */
-  .light-tag.c-blue { background: rgba(0,10,30,0.82); border: 1.5px solid #4a9fe8; }
-  .light-tag.c-blue .tag-val { color: #4a9fe8; }
-  /* C燈 — 綠 */
-  .light-tag.c-green { background: rgba(0,20,8,0.82); border: 1.5px solid #3ecf6a; }
-  .light-tag.c-green .tag-val { color: #3ecf6a; }
-  .light-tag .tag-dot { display: none; }
-  .light-tag .tag-values { display: flex; gap: 6px; align-items: center; }
-  .light-tag .tag-val { font-size: 11px; font-weight: 700; cursor: pointer; padding: 1px 3px; border-radius: 3px; white-space: nowrap; }
-  .light-tag .tag-val:hover { opacity: 0.8; }
-  .light-tag .tag-val[contenteditable=true] { min-width: 28px; }
-  .light-tag .tag-sep { display: none; }
+/* PHOTO */
+.photo-box{border:1px dashed rgba(255,255,255,.18);border-radius:6px;background:#363739!important;display:flex;align-items:center;justify-content:center;cursor:pointer;overflow:hidden;min-height:56px}
+.photo-box img{width:100%;height:100%;object-fit:cover;display:block}
+.ph-ph{display:flex;flex-direction:column;align-items:center;gap:3px;color:#555552;font-size:11px}
+.ph-ph .phi{font-size:20px}
+#photo-input{display:none}
 
-  /* ── LIGHT CARDS ── */
-  .lights-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; margin-top: 16px; }
-  .light-card { border-radius: var(--radius-sm); padding: 12px 14px; min-width: 0; transition: opacity 0.2s; }
-  .light-card.off { opacity: 0.28; }
-  /* 燈組顏色外框 */
-  .light-card.g-yellow { background: rgba(40,34,0,0.7); border: 1.5px solid #e8c40c44; }
-  .light-card.g-yellow.on { border-color: #e8c40c99; }
-  .light-card.g-blue   { background: rgba(0,16,40,0.7); border: 1.5px solid #4a9fe844; }
-  .light-card.g-blue.on   { border-color: #4a9fe899; }
-  .light-card.g-green  { background: rgba(0,28,12,0.7); border: 1.5px solid #3ecf6a44; }
-  .light-card.g-green.on  { border-color: #3ecf6a99; }
-  .light-card-top { display: flex; align-items: center; margin-bottom: 10px; }
-  .lc-name-row { display: flex; align-items: center; gap: 8px; width: 100%; }
-  .lc-name-row .light-card-name { flex: 1; min-width: 0; }
-  .lc-name-row .rgb-toggle { margin-left: auto; flex-shrink: 0; }
-  /* 電源按鈕 */
-  .power-btn { background: none; border: none; cursor: pointer; font-size: 16px; line-height: 1; padding: 2px; flex-shrink: 0; filter: grayscale(1) brightness(0.4); transition: filter 0.2s; }
-  .power-btn.on { filter: grayscale(0) brightness(1.1); }
-  .light-card.g-yellow .power-btn.on { color: #e8c40c; }
-  .light-card.g-blue   .power-btn.on { color: #4a9fe8; }
-  .light-card.g-green  .power-btn.on { color: #3ecf6a; }
-  /* 燈具選擇 */
-  .fixture-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; align-items: center; }
-  .fixture-btn { font-size: 11px; padding: 3px 9px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.03); color: #555; cursor: pointer; transition: all 0.15s; }
-  .fixture-btn:hover { color: #aaa; border-color: rgba(255,255,255,0.25); }
-  .fixture-btn.active { background: rgba(255,255,255,0.18); color: #eee; border-color: rgba(255,255,255,0.45); font-weight: 600; }
-  .honeycomb-row { display: flex; align-items: center; gap: 6px; margin-top: 6px; }
-  .honeycomb-row label { font-size: 11px; color: #888; cursor: pointer; display: flex; align-items: center; gap: 4px; }
+/* NOTE */
+.note-inp{width:100%;background:#363739!important;border:1px solid rgba(255,255,255,.10)!important;border-radius:6px;color:#e8e8e6!important;font-size:16px;padding:7px 9px;outline:none;margin-bottom:8px;-webkit-appearance:none;font-family:var(--sans)}
+.note-inp::placeholder{color:#555552}
 
-  /* RGB 圓點 toggle */
-  .rgb-toggle { display: flex; align-items: center; gap: 5px; cursor: pointer; flex-shrink: 0; }
-  .rgb-toggle .rgb-dot { width: 8px; height: 8px; border-radius: 50%; border: 1.5px solid #555; background: transparent; transition: all 0.15s; }
-  .rgb-toggle.on .rgb-dot { background: #4a9fe8; border-color: #4a9fe8; box-shadow: 0 0 4px #4a9fe8aa; }
-  .rgb-toggle .rgb-label { font-size: 10px; color: #555; letter-spacing: 0.03em; transition: color 0.15s; }
-  .rgb-toggle.on .rgb-label { color: #4a9fe8; }
-  .light-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
-  .lf { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
-  .lf label { font-size: 10px; color: #777; text-transform: uppercase; letter-spacing: 0.05em; white-space: nowrap; }
-  .lf input { background: #2a2a2a; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; padding: 5px 7px; color: #eee; font-size: 12px; font-weight: 500; outline: none; font-family: inherit; width: 100%; min-width: 0; }
-  .lf input:focus { border-color: var(--accent); }
-  .lf.full { grid-column: 1 / -1; }
+/* REC BTN */
+.rec-btn{width:100%;background:#c0392b!important;border:none;border-radius:6px;color:#fff!important;font-size:15px;font-weight:700;font-family:var(--mono);letter-spacing:.08em;padding:13px;cursor:pointer;-webkit-appearance:none}
+.rec-btn:active{opacity:.82}
 
-  .cam-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
-  .cam-card { background: #3c3c3c; border: 1px solid rgba(255,255,255,0.1); border-radius: var(--radius); padding: 16px; min-width: 0; }
-  .cam-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
-  .cam-name { font-size: 14px; font-weight: 700; background: none; border: none; font-family: inherit; color: var(--blue); outline: none; width: 80px; min-width: 0; }
-  .cam-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-  .cam-field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
-  .cam-field label { font-size: 10px; color: #777; text-transform: uppercase; letter-spacing: 0.06em; white-space: nowrap; }
-  .cam-field input { background: #2a2a2a; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; padding: 6px 8px; color: #eee; font-size: 13px; font-weight: 500; outline: none; font-family: 'Courier New', monospace; width: 100%; min-width: 0; }
-  .cam-field input:focus { border-color: var(--blue); }
-  .cam-field.full { grid-column: 1 / -1; }
-  /* ── CAM SLIDE UI ── */
-  .cam-slide { flex-shrink: 0; width: 72%; max-width: 680px; min-width: 260px; border-radius: var(--radius); overflow: hidden; background: #3a3a3a; border: 1px solid rgba(255,255,255,0.1); scroll-snap-align: start; }
-  .cam-slide-img { position: relative; cursor: pointer; min-height: 200px; display: flex; align-items: center; justify-content: center; background: #2e2e2e; }
-  .cam-slide-img img { width: 100%; max-height: 380px; object-fit: contain; display: block; }
-  .cam-slide-img .cam-img-hint { color: #555; font-size: 13px; display: flex; flex-direction: column; align-items: center; gap: 6px; }
-  .cam-slide-img .cam-img-hint span:first-child { font-size: 24px; }
-  .cam-slide-img .img-change-btn { position: absolute; top: 8px; right: 8px; display: none; }
-  .cam-slide-img:hover .img-change-btn { display: block; }
-  .cam-slide-info { padding: 12px 14px; }
-  .cam-slide-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; gap: 8px; }
-  .cam-slide-name { font-size: 14px; font-weight: 700; color: var(--blue); background: none; border: none; font-family: inherit; outline: none; min-width: 0; flex: 1; }
-  .cam-specs { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
-  .cam-spec { display: flex; flex-direction: column; gap: 2px; }
-  .cam-spec label { font-size: 9px; color: #666; text-transform: uppercase; letter-spacing: 0.05em; }
-  .cam-spec input { background: #2a2a2a; border: 1px solid rgba(255,255,255,0.08); border-radius: 4px; padding: 4px 6px; color: #ddd; font-size: 11px; font-family: 'Courier New', monospace; outline: none; width: 100%; }
-  .cam-spec input:focus { border-color: var(--blue); }
-  /* 上線畫面 shot-type */
-  .shot-type-row { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 6px; }
-  .shot-btn { font-size: 10px; padding: 2px 7px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.12); background: none; color: #666; cursor: pointer; transition: all 0.15s; }
-  .shot-btn.active { background: rgba(255,255,255,0.12); color: #ccc; border-color: rgba(255,255,255,0.3); }
-  @media (max-width: 600px) {
-    .cam-slide { width: 90%; }
-    .cam-specs { grid-template-columns: repeat(3, 1fr); }
-  }
+/* LOG */
+.log-hdr{display:flex;align-items:center;gap:6px;margin-bottom:8px}
+.log-cnt{font-family:var(--mono);font-size:11px;color:#888885;flex:1}
+.lbtn{background:#363739!important;border:1px solid rgba(255,255,255,.12)!important;border-radius:6px;color:#e8e8e6!important;font-size:12px;padding:6px 11px;cursor:pointer;-webkit-appearance:none;font-family:var(--sans)}
+.lbtn.save{color:#3a9d54!important;border-color:rgba(58,157,84,.35)!important;font-weight:500}
+.log-empty{font-size:13px;color:#555552;text-align:center;padding:14px 0;font-family:var(--mono)}
+.li{display:grid;grid-template-columns:20px 1fr auto;gap:5px;align-items:start;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.08)}
+.li:last-child{border-bottom:none}
+.li-num{font-size:11px;color:#555552;padding-top:2px;font-family:var(--mono)}
+.li-main{display:flex;flex-direction:column;gap:3px}
+.li-top{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+.li-cam{font-family:var(--mono);font-size:11px;color:#d4711a;background:rgba(212,113,26,.15);border:1px solid rgba(212,113,26,.3);border-radius:3px;padding:1px 5px}
+.li-tc{font-family:var(--mono);font-size:14px;font-weight:500;color:#e8e8e6}
+.li-ppt{font-family:var(--mono);font-size:11px;color:#888885}
+.badge{font-size:11px;padding:1px 8px;border-radius:20px;font-weight:500;display:inline-block}
+.b0{background:rgba(184,122,18,.2);color:#d4a843;border:1px solid rgba(184,122,18,.3)}
+.b1{background:rgba(192,57,43,.2);color:#e06b6a;border:1px solid rgba(192,57,43,.3)}
+.b2{background:rgba(26,92,140,.2);color:#7ab0e0;border:1px solid rgba(26,92,140,.3)}
+.b3{background:rgba(74,85,104,.2);color:#888885;border:1px solid rgba(74,85,104,.3)}
+.li-thumb{width:64px;height:44px;border-radius:4px;object-fit:cover;border:1px solid rgba(255,255,255,.10);cursor:zoom-in;display:block;margin-top:4px}
+.li-note{font-size:12px;color:#888885;font-style:italic}
+.note-inline{width:100%;background:transparent;border:none;border-bottom:1px solid rgba(255,255,255,.12);border-radius:0;color:#888885;font-size:13px;font-family:var(--sans);padding:4px 2px;outline:none;margin-top:4px;-webkit-appearance:none;font-style:italic}
+.note-inline:focus{border-bottom-color:rgba(212,113,26,.6);color:#e8e8e6}
+.note-inline::placeholder{color:#444442}
+@media(min-width:768px){.note-inline{font-size:15px;padding:5px 2px}}
+.del-btn{background:none!important;border:none!important;cursor:pointer;color:#555552;font-size:15px;padding:0 2px}
+.del-btn:hover{color:#c0392b}
 
-  .onair-slide { flex-shrink: 0; width: 72%; max-width: 680px; min-width: 260px; border-radius: var(--radius); overflow: hidden; background: #3a3a3a; border: 1px solid rgba(255,255,255,0.1); scroll-snap-align: start; }
-  .onair-slide-img { position: relative; cursor: pointer; min-height: 200px; display: flex; align-items: center; justify-content: center; background: #2e2e2e; }
-  .onair-slide-img img { width: 100%; max-height: 420px; object-fit: contain; display: block; }
-  .onair-slide-img .img-change-btn { position: absolute; top: 8px; right: 8px; display: none; }
-  .onair-slide-img:hover .img-change-btn { display: block; }
-  .onair-slide-img .onair-hint { color: #555; font-size: 13px; display: flex; flex-direction: column; align-items: center; gap: 6px; }
-  .onair-slide-img .onair-hint span:first-child { font-size: 28px; }
-  .onair-slide-info { padding: 10px 14px 12px; }
-  .onair-slide-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 7px; }
-  .onair-slide-name { font-size: 14px; font-weight: 700; color: var(--accent); background: none; border: none; font-family: inherit; outline: none; flex: 1; min-width: 0; }
-  .shot-type-row { display: flex; gap: 5px; flex-wrap: wrap; }
-  .shot-btn { font-size: 10px; padding: 3px 9px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.12); background: none; color: #555; cursor: pointer; transition: all 0.15s; }
-  .shot-btn:hover { color: #aaa; border-color: rgba(255,255,255,0.25); }
-  .shot-btn.active { background: rgba(255,255,255,0.12); color: #ccc; border-color: rgba(255,255,255,0.35); font-weight: 600; }
-  @media (max-width: 600px) { .onair-slide { width: 90%; } }
-  .note-area { width: 100%; background: #3c3c3c; border: 1px solid rgba(255,255,255,0.1); border-radius: var(--radius-sm); padding: 10px 14px; color: #ddd; font-size: 13px; font-family: inherit; resize: vertical; outline: none; margin-top: 12px; line-height: 1.6; }
-  .note-area:focus { border-color: rgba(255,255,255,0.25); }
+/* FLASH */
+#flash-ov{position:fixed;inset:0;z-index:999;display:flex;align-items:center;justify-content:center;pointer-events:none;opacity:0}
+#flash-ov.fire{animation:fbg .65s ease-out forwards}
+@keyframes fbg{0%{opacity:0;background:rgba(0,0,0,0)}12%{opacity:1;background:rgba(255,255,255,.10)}40%{opacity:1;background:rgba(0,0,0,0)}100%{opacity:0}}
+#flash-ic{font-size:88px;opacity:0;transform:scale(.3)}
+#flash-ov.fire #flash-ic{animation:fburst .6s cubic-bezier(.18,1.5,.4,1) forwards}
+@keyframes fburst{0%{opacity:0;transform:scale(.3)}25%{opacity:1;transform:scale(1.2)}55%{opacity:1;transform:scale(1)}80%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(1.1)}}
 
-  .btn { padding: 7px 16px; border-radius: var(--radius-sm); font-size: 12px; font-weight: 500; cursor: pointer; border: none; transition: all 0.15s; font-family: inherit; }
-  .btn-primary { background: var(--accent); color: #fff; }
-  .btn-primary:hover { background: var(--accent2); }
-  .btn-danger { background: none; border: 1px solid rgba(255,255,255,0.12); color: #777; }
-  .btn-danger:hover { border-color: var(--red); color: var(--red); }
+/* LIGHTBOX */
+#lightbox{position:fixed;inset:0;z-index:900;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.88);cursor:zoom-out}
+#lightbox.on{display:flex}
+#lightbox img{max-width:94vw;max-height:88vh;border-radius:8px;object-fit:contain}
 
-  .toast { position: fixed; bottom: 24px; right: 24px; background: #111; color: #f0f0f0; padding: 10px 20px; border-radius: var(--radius-sm); font-size: 13px; font-weight: 500; opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 9999; }
-  .toast.show { opacity: 1; }
+/* ARCHIVE MODAL */
+#arch-modal{display:none;position:fixed;inset:0;z-index:300;background:rgba(0,0,0,.85);overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px}
+#arch-modal.on{display:block}
+.am-card{background:#2c2e31!important;border:1px solid rgba(255,255,255,.14);border-radius:10px;padding:16px;max-width:560px;margin:20px auto}
+.am-head{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(255,255,255,.10);padding-bottom:12px;margin-bottom:12px}
+.am-title{font-size:15px;font-weight:500;color:#e8e8e6}
+.am-close{background:#363739!important;border:1px solid rgba(255,255,255,.10)!important;border-radius:6px;color:#888885!important;font-size:12px;padding:5px 10px;cursor:pointer;-webkit-appearance:none}
 
-  .loading-overlay { position: fixed; inset: 0; background: var(--bg2); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; z-index: 1000; }
-  .loading-overlay.hidden { display: none; }
-  .spinner { width: 32px; height: 32px; border: 3px solid rgba(255,255,255,0.1); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  .loading-text { font-size: 13px; color: #888; }
+/* SESSION ITEMS */
+.si{background:#363739!important;border:1px solid rgba(255,255,255,.10);border-radius:8px;padding:12px;margin-bottom:6px;cursor:pointer}
+.si:hover{border-color:rgba(212,113,26,.4)}
+.si-title{font-size:14px;font-weight:500;color:#e8e8e6;margin-bottom:3px}
+.si-meta{font-size:11px;color:#888885;font-family:var(--mono)}
+.sd{display:none;background:#252628;border:1px solid rgba(255,255,255,.08);border-radius:6px;padding:12px;margin-top:-2px;margin-bottom:8px}
+.sd.on{display:block}
 
-  .main::-webkit-scrollbar { width: 6px; }
-  .main::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+/* TABLE */
+.ss-tbl{width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed;margin-bottom:12px}
+.ss-tbl th{background:#363739;padding:6px 7px;text-align:left;font-weight:500;color:#888885;border-bottom:1px solid rgba(255,255,255,.14);font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase}
+.ss-tbl td{padding:6px 7px;border-bottom:1px solid rgba(255,255,255,.06);vertical-align:middle;color:#e8e8e6}
+.ss-tbl tr:last-child td{border-bottom:none}
+.cam-hdr{background:rgba(212,113,26,.12);color:#d4711a;font-family:var(--mono);font-size:11px;font-weight:500;padding:5px 7px;letter-spacing:.06em}
+.ss-badge{display:inline-block;font-size:11px;padding:1px 7px;border-radius:20px;font-weight:500}
+.exp-row{display:flex;gap:8px}
+.exp-btn{flex:1;border:none;border-radius:6px;color:#fff!important;font-size:13px;font-weight:500;font-family:var(--mono);padding:10px;cursor:pointer;-webkit-appearance:none}
+.exp-srt{background:#d4711a!important}
+.exp-csv{background:#3a7d44!important}
 
-  /* MOBILE NAV */
-  .mobile-nav-bar { display: none; position: fixed; bottom: 0; left: 0; right: 0; background: var(--bg2); border-top: 1px solid var(--border); z-index: 200; flex-direction: column; }
-  .mobile-nav-header { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; border-bottom: 1px solid var(--border); }
-  .mobile-nav-title { font-size: 13px; font-weight: 600; color: var(--accent); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-right: 10px; }
-  .mobile-nav-toggle { background: none; border: none; color: #aaa; font-size: 20px; cursor: pointer; padding: 2px 6px; line-height: 1; flex-shrink: 0; }
-  .mobile-nav-list { display: none; max-height: 50vh; overflow-y: auto; padding: 8px 0; }
-  .mobile-nav-list.open { display: block; }
-  .mobile-nav-add { padding: 10px 16px; font-size: 13px; color: var(--accent); border-top: 1px solid var(--border); cursor: pointer; text-align: center; }
+/* iOS EXPORT VIEWER */
+#ev-wrap{display:none;position:fixed;inset:0;z-index:950;background:rgba(0,0,0,.92);flex-direction:column;padding:16px;gap:10px}
+#ev-wrap.on{display:flex}
 
-  @media (max-width: 900px) {
-    .sidebar { width: 180px; min-width: 180px; }
-    .panel { padding: 16px 18px; }
-    .main-header { padding: 16px 18px 0; }
-    .section-tabs { padding: 12px 18px 0; }
-    .lights-grid { grid-template-columns: 1fr 1fr; }
-    .cam-grid { grid-template-columns: 1fr; }
-    .gallery-slide img { max-height: 520px; }
-  }
-  @media (max-width: 600px) {
-    .app { flex-direction: column; height: 100dvh; }
-    .sidebar { display: none; }
-    .main { flex: 1; overflow-y: auto; padding-bottom: 110px; }
-    .mobile-nav-bar { display: flex; }
-    .panel { padding: 14px; }
-    .main-header { padding: 14px 14px 0; gap: 8px; }
-    .section-tabs { padding: 10px 14px 0; overflow-x: auto; white-space: nowrap; flex-wrap: nowrap; gap: 0; }
-    .stab { padding: 8px 12px; font-size: 12px; flex-shrink: 0; }
-    .editable-title { font-size: 18px; }
-    .lights-grid { grid-template-columns: 1fr; }
-    .cam-grid { grid-template-columns: 1fr; }
-    .lf input, .cam-field input { font-size: 16px; padding: 9px 10px; }
-    .light-card-name, .cam-name { font-size: 15px; }
-    .note-area { font-size: 16px; }
-    .overlay-zone { min-height: 180px; }
-    .onair-zone { min-height: 200px; }
-    .img-change-btn { display: block !important; }
-    .toast { bottom: 120px; }
-    .gallery-slide { width: 90%; }
-    .gallery-slide img { max-height: 300px; object-fit: cover; object-position: center; }
-    .light-tag .tag-val { font-size: 10px; }
-  }
+/* ── iPad (768px+) ── */
+@media (min-width:768px){
+  #app{ max-width:640px; padding:14px 20px 40px; gap:12px; }
+  #hdr-in{ max-width:640px; padding:12px 20px; }
+  .logo{ font-size:17px; }
+  .title-txt{ font-size:17px; }
+  .date-chip{ font-size:13px; padding:4px 12px; }
+  .hdr-btn{ font-size:13px; padding:6px 14px; }
+
+  .card{ padding:16px; border-radius:14px; }
+  .clabel{ font-size:12px; margin-bottom:14px; }
+
+  #timer{ font-size:42px; letter-spacing:3px; }
+  #waveform{ height:38px; gap:4px; }
+  #waveform span{ width:5px; }
+  #waveform span:nth-child(1){ height:12px; }
+  #waveform span:nth-child(2){ height:26px; }
+  #waveform span:nth-child(3){ height:38px; }
+  #waveform span:nth-child(4){ height:26px; }
+  #waveform span:nth-child(5){ height:14px; }
+  .roll-btn,.stop-btn{ font-size:16px; padding:13px 22px; border-radius:9px; }
+
+  .field label,.tc-label{ font-size:13px; }
+  .field input,.tc-input,.note-inp{ font-size:18px!important; padding:10px 12px; border-radius:8px; }
+  .finput{ font-size:18px!important; }
+
+  .type-grid{ gap:8px; margin-bottom:14px; }
+  .tbtn{ padding:14px 4px 12px; border-radius:9px; font-size:14px; }
+  .tbtn .ti{ font-size:22px; }
+
+  .grab-btn{ width:54px!important; font-size:24px!important; border-radius:8px; }
+
+  .photo-box{ min-height:72px; border-radius:8px; }
+  .ph-ph .phi{ font-size:26px; }
+  .ph-ph{ font-size:13px; }
+
+  .rec-btn{ font-size:19px; padding:17px; border-radius:9px; letter-spacing:.10em; }
+
+  .log-cnt{ font-size:14px; }
+  .lbtn{ font-size:14px; padding:8px 16px; border-radius:8px; }
+  .li{ padding:11px 0; gap:7px; }
+  .li-num{ font-size:13px; }
+  .li-tc{ font-size:17px; }
+  .li-cam,.li-ppt{ font-size:13px; }
+  .badge{ font-size:13px; padding:2px 10px; }
+  .li-thumb{ width:90px; height:62px; border-radius:6px; }
+  .li-note{ font-size:14px; }
+  .del-btn{ font-size:19px; }
+
+  .am-card{ padding:20px; border-radius:14px; }
+  .am-title{ font-size:18px; }
+  .si{ padding:16px; border-radius:10px; }
+  .si-title{ font-size:16px; }
+  .si-meta{ font-size:13px; }
+  .ss-tbl{ font-size:14px; }
+  .ss-tbl th{ font-size:12px; padding:8px 10px; }
+  .ss-tbl td{ padding:10px 10px; }
+  .exp-btn{ font-size:15px; padding:13px; }
+  .ss-badge{ font-size:13px; padding:2px 9px; }
+}
 </style>
 </head>
 <body>
 
-<div class="loading-overlay" id="loadingOverlay">
-  <div class="spinner"></div>
-  <div class="loading-text" id="loadingText">連線 Firebase 中…</div>
+<div id="flash-ov"><div id="flash-ic"></div></div>
+<div id="lightbox" onclick="closeLightbox()"><img id="lb-img" src="" alt="PPT"></div>
+
+<!-- ARCHIVE MODAL -->
+<div id="arch-modal">
+  <div class="am-card">
+    <div class="am-head">
+      <div class="am-title">📂 已儲存場次（最近3天）</div>
+      <button class="am-close" onclick="closeArchive()">✕ 關閉</button>
+    </div>
+    <div id="arch-list"><div class="log-empty">載入中…</div></div>
+  </div>
 </div>
 
-<div class="app">
-  <div class="sidebar">
-    <div class="sidebar-header">
-      <h1>DT STUDIO</h1>
-      <p>場景管理系統</p>
-      <div class="sync-status">
-        <span class="sync-dot" id="syncDot"></span>
-        <span id="syncText">連線中…</span>
+<!-- iOS EXPORT VIEWER -->
+<div id="ev-wrap">
+  <div style="display:flex;justify-content:space-between;align-items:center">
+    <span id="ev-fn" style="font-family:monospace;font-size:13px;color:#d4711a;flex:1;padding-right:10px;word-break:break-all"></span>
+    <button onclick="document.getElementById('ev-wrap').classList.remove('on')"
+      style="background:#363739;border:1px solid #555;color:#ccc;border-radius:6px;padding:5px 12px;font-size:13px;cursor:pointer;flex-shrink:0">✕</button>
+  </div>
+  <button id="ev-copy-btn"
+    style="background:#3a7d44;border:none;color:#fff;border-radius:6px;padding:10px;font-size:14px;font-weight:500;cursor:pointer">複製全部內容</button>
+  <textarea id="ev-ta" readonly
+    style="flex:1;background:#1c1d1f;border:1px solid #333;border-radius:6px;color:#e8e8e6;font-family:monospace;font-size:12px;padding:10px;resize:none;-webkit-user-select:text;user-select:text"></textarea>
+  <p style="font-size:11px;color:#666;text-align:center">複製後貼到記事本，存成 .srt 或 .csv 檔</p>
+</div>
+
+<!-- HEADER -->
+<div id="hdr">
+  <div id="hdr-in">
+    <div class="title-txt" style="font-size:15px;font-weight:600">行動場記表</div>
+    <div class="spacer"></div>
+    <div id="sync-dot" title="Firebase 同步狀態"></div>
+    <button class="hdr-btn" onclick="openArchive()">場次清單</button>
+    <div class="date-chip" id="date-chip">—</div>
+  </div>
+</div>
+
+<div id="app">
+  <!-- TIMER + META -->
+  <div class="card">
+    <div class="timer-row">
+      <div id="timer">00:00:00</div>
+      <div id="waveform"><span></span><span></span><span></span><span></span><span></span></div>
+      <button class="roll-btn" onclick="startTimer()">▶ ROLL</button>
+      <button class="stop-btn" onclick="stopTimer()">■ STOP</button>
+    </div>
+    <div class="grid2" style="margin-top:10px">
+      <div class="field"><label>Project</label><input id="proj" placeholder="專案名稱"></div>
+      <div class="field"><label>Speaker</label><input id="spk" placeholder="講者姓名"></div>
+    </div>
+  </div>
+
+  <!-- NG FORM -->
+  <div class="card">
+    <div class="clabel" style="display:none">記錄 NG</div>
+    <div class="type-grid">
+      <button class="tbtn t0" id="ty0" onclick="pickType(0)"><span class="ti">⚠️</span>NG</button>
+      <button class="tbtn t1" id="ty1" onclick="pickType(1)"><span class="ti">🔄</span>重來</button>
+      <button class="tbtn t2" id="ty2" onclick="pickType(2)"><span class="ti">🎙</span>聲音狀況</button>
+      <button class="tbtn t3" id="ty3" onclick="pickType(3)"><span class="ti">🖥</span>簡報調整</button>
+    </div>
+    <div style="display:flex;gap:6px;margin-bottom:8px;align-items:flex-end">
+      <div class="field" style="width:86px;flex-shrink:0">
+        <label>檔號 CAM</label>
+        <input id="f-roll" type="number" min="1" placeholder="CAM #" style="text-align:center">
+      </div>
+      <div class="tc-field" style="flex:1;min-width:0">
+        <div class="tc-label">Timecode</div>
+        <div class="tc-wrap">
+          <input class="tc-input" id="f-tc" placeholder="00:00:00" style="min-width:0">
+          <button class="grab-btn" onclick="grabTC()" style="width:44px;flex-shrink:0;font-size:20px">⏱</button>
+        </div>
       </div>
     </div>
-    <div class="sidebar-search">
-      <input type="text" placeholder="搜尋節目…" id="searchInput" oninput="filterNav()">
+    <div style="display:flex;gap:6px;margin-bottom:8px;align-items:flex-start">
+      <div class="field" style="width:86px;flex-shrink:0">
+        <label>PPT 頁數</label>
+        <input id="f-ppt" type="number" min="1" placeholder="第 ? 頁" style="text-align:center">
+      </div>
+      <div class="field" style="flex:1;min-width:0">
+        <label>PPT 照片</label>
+        <div class="photo-box" id="photo-box" onclick="document.getElementById('photo-input').click()">
+          <div class="ph-ph"><span class="phi">📷</span><span>拍照 / 選圖</span></div>
+        </div>
+        <input type="file" id="photo-input" accept="image/*" capture="environment" onchange="onPhoto(event)">
+      </div>
     </div>
-    <div class="sidebar-list" id="navList"></div>
-    <div class="nav-add" onclick="addProgram()">＋ 新增節目</div>
+    <input class="note-inp" id="f-note" placeholder="備註（選填）">
+    <button class="rec-btn" onclick="addNG()">⚡ 紀錄</button>
   </div>
-  <div class="main" id="mainArea"></div>
-</div>
 
-<div class="mobile-nav-bar" id="mobileNav">
-  <div class="mobile-nav-header">
-    <span class="mobile-nav-title" id="mobileNavTitle">選擇節目</span>
-    <button class="mobile-nav-toggle" id="mobileNavToggle" onclick="toggleMobileNav()">☰</button>
+  <!-- LOG LIST -->
+  <div class="card">
+    <div class="log-hdr">
+      <span class="log-cnt" id="log-cnt">記錄表 0 筆</span>
+      <button class="lbtn save" onclick="saveSession()">💾 儲存場次</button>
+      <button class="lbtn" onclick="clearCurrent()">清空</button>
+    </div>
+    <div id="log-list"><div class="log-empty">— 尚無紀錄 —</div></div>
   </div>
-  <div class="mobile-nav-list" id="mobileNavList"></div>
-  <div class="mobile-nav-add" onclick="addProgram()">＋ 新增節目</div>
 </div>
-
-<div class="toast" id="toast"></div>
 
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import { getFirestore, doc, collection, onSnapshot, setDoc, deleteDoc, getDocs }
+import { getFirestore, collection, doc, setDoc, getDocs, query, orderBy, writeBatch }
   from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
-const app = initializeApp({
-  apiKey: "AIzaSyAA_lBeMcU_MHwBIakycWMY1qVFQpNFlLw",
-  authDomain: "dt-studio-5bb2b.firebaseapp.com",
-  projectId: "dt-studio-5bb2b",
-  storageBucket: "dt-studio-5bb2b.firebasestorage.app",
-  messagingSenderId: "453498810482",
-  appId: "1:453498810482:web:265ae1a1aac433355e52eb"
-});
-const db = getFirestore(app);
-const COL = 'programs';
-
-// ── CLOUDINARY ──
-const CLD_CLOUD  = 'dz7ark1gs';
-const CLD_PRESET = 'DTstudio';
-const CLD_URL    = `https://api.cloudinary.com/v1_1/${CLD_CLOUD}/image/upload`;
-const colRef = () => collection(db, COL);
-const docRef = id => doc(db, COL, String(id));
-
-// ── STATE ──
-let programs = [], activeId = null, activeTab = 'scene', nextId = 1;
-let dragging = null, dragOffX = 0, dragOffY = 0;
-let navDraggingId = null, saveTimer = null;
-
-// ── SYNC STATUS ──
-function setSyncStatus(state, text) {
-  const dot = document.getElementById('syncDot');
-  const sp  = document.getElementById('syncText');
-  dot.className = 'sync-dot ' + state;
-  sp.textContent = text;
-}
-
-// ── OFFLINE FALLBACK ──
-const LS_KEY = 'dt_studio_offline';
-let isOffline = false;
-
-function loadFromLocal() {
-  try { return JSON.parse(localStorage.getItem(LS_KEY) || 'null'); } catch { return null; }
-}
-function saveToLocal() {
-  try { localStorage.setItem(LS_KEY, JSON.stringify(programs)); } catch {} 
-}
-
-// 直接 3 秒後強制顯示畫面（不管 Firebase 有沒有回來）
-setTimeout(() => {
-  const overlay = document.getElementById('loadingOverlay');
-  if (!overlay.classList.contains('hidden')) {
-    isOffline = true;
-    const local = loadFromLocal();
-    if (local && local.length > 0) {
-      programs = local;
-      nextId = Math.max(...programs.map(p=>p.id), 0) + 1;
-      if (!activeId && programs.length) activeId = programs[0].id;
-    }
-    overlay.classList.add('hidden');
-    setSyncStatus('error', '離線模式');
-    render();
-  }
-}, 3000);
-
-// ── FIRESTORE ──
-onSnapshot(colRef(), snap => {
-  isOffline = false;
-  const incoming = [];
-  snap.forEach(d => incoming.push(d.data()));
-  incoming.sort((a,b) => (a.order??a.id) - (b.order??b.id));
-  programs = incoming;
-  nextId = programs.length ? Math.max(...programs.map(p=>p.id))+1 : 1;
-  if (!activeId && programs.length) activeId = programs[0].id;
-  if (activeId && !getP(activeId) && programs.length) activeId = programs[0].id;
-  saveToLocal();
-  document.getElementById('loadingOverlay').classList.add('hidden');
-  setSyncStatus('online', '已同步');
-  render();
-}, err => {
-  console.error('Firestore error:', err);
-  isOffline = true;
-  const local = loadFromLocal();
-  if (local && local.length > 0) {
-    programs = local;
-    nextId = Math.max(...programs.map(p=>p.id), 0) + 1;
-    if (!activeId && programs.length) activeId = programs[0].id;
-  }
-  document.getElementById('loadingOverlay').classList.add('hidden');
-  setSyncStatus('error', '離線模式');
-  render();
-});
-
-async function saveProgram(p) {
-  saveToLocal(); // 永遠先存本機
-  if (isOffline) {
-    toast('已存到本機（離線模式）');
-    return;
-  }
-  setSyncStatus('saving', '儲存中…');
-  try {
-    await setDoc(docRef(p.id), p);
-    setSyncStatus('online', '已同步');
-    toast('已儲存');
-  } catch(e) {
-    setSyncStatus('error', '儲存失敗');
-    const msg = e.code === 'invalid-argument'
-      ? '圖片太大，請減少圖片數量或改用較小的圖片'
-      : '儲存失敗：' + (e.message || e.code);
-    toast(msg);
-    console.error('saveProgram error:', e);
-  }
-}
-async function removeProgram(id) {
-  programs = programs.filter(p => p.id !== id);
-  saveToLocal();
-  if (isOffline) return;
-  try { await deleteDoc(docRef(id)); } catch(e) { setSyncStatus('error', '刪除失敗'); }
-}
-async function saveOrder() {
-  saveToLocal();
-  if (isOffline) return;
-  try { await Promise.all(programs.map((p,i) => setDoc(docRef(p.id), {...p, order:i}))); setSyncStatus('online','已同步'); }
-  catch(e) { setSyncStatus('error','儲存失敗'); }
-}
-function debouncedSave(p) { clearTimeout(saveTimer); saveTimer = setTimeout(()=>saveProgram(p), 1200); }
-
-// ── SEED ──
-(async()=>{
-  const snap = await getDocs(colRef());
-  if (!snap.empty) return;
-  const D = [
-    {id:1,name:"科技剪報中",status:"就緒",sceneNote:"擬太陽光，白長桌+高腳椅，攝影機+提詞機",sceneImg:null,sceneTagPos:{},lights:[{name:"主燈",intensity:"",kelvin:"4200K",note:""},{name:"輔燈",intensity:"",kelvin:"",note:""}],cameras:[],onairImg:null,onairNote:"",order:0},
-    {id:2,name:"導讀矽紀元",status:"就緒",sceneNote:"mini mic*2，進L8",sceneImg:null,sceneTagPos:{},lights:[{name:"主燈",intensity:"23%",kelvin:"4200K",note:""},{name:"輔燈",intensity:"23%",kelvin:"4200K",note:""},{name:"頂光",intensity:"",kelvin:"",note:""}],cameras:[{name:"C1",aperture:"",shutter:"",iso:"",kelvin:"",note:"特寫",img:null},{name:"C2",aperture:"",shutter:"",iso:"",kelvin:"",note:"雙人",img:null}],onairImg:null,onairNote:"",order:1},
-    {id:3,name:"It's 秀 time",status:"準備中",sceneNote:"",sceneImg:null,sceneTagPos:{},lights:[{name:"主燈",intensity:"80%",kelvin:"3000K",note:""},{name:"輔燈",intensity:"80%",kelvin:"3000K",note:""},{name:"頂光",intensity:"7%",kelvin:"3000K",note:""}],cameras:[],onairImg:null,onairNote:"",order:2},
-    {id:4,name:"矽島春秋",status:"就緒",sceneNote:"0912內湖新場景",sceneImg:null,sceneTagPos:{},lights:[{name:"燈(1)",intensity:"50%",kelvin:"3400K",note:""},{name:"燈(2)",intensity:"50%",kelvin:"3400K",note:""},{name:"燈(3)",intensity:"5%",kelvin:"3400K",note:""},{name:"燈(4)",intensity:"1%",kelvin:"3800K",note:""}],cameras:[{name:"C1",aperture:"F4.5",shutter:"1/60",iso:"iso800",kelvin:"3400k",note:"",img:null},{name:"C2",aperture:"F5.6",shutter:"1/60",iso:"iso800",kelvin:"3400k",note:"",img:null},{name:"C3",aperture:"F4.0",shutter:"1/60",iso:"iso800",kelvin:"3400k",note:"",img:null}],onairImg:null,onairNote:"",order:3},
-    {id:5,name:"AI EXPO 單人專訪",status:"就緒",sceneNote:"單人專訪",sceneImg:null,sceneTagPos:{},lights:[{name:"燈1",intensity:"45%",kelvin:"4200K",note:""},{name:"燈2",intensity:"10%",kelvin:"4200K",note:""},{name:"燈3",intensity:"5%",kelvin:"2700K",note:""},{name:"燈4",intensity:"3%",kelvin:"2500K",note:""}],cameras:[{name:"C1",aperture:"F4.0",shutter:"1/60",iso:"iso400",kelvin:"4200k",note:"",img:null},{name:"C2",aperture:"F4.0",shutter:"1/60",iso:"iso400",kelvin:"4200k",note:"",img:null}],onairImg:null,onairNote:"",order:4},
-    {id:6,name:"AI EXPO 雙人訪談",status:"就緒",sceneNote:"雙人訪談",sceneImg:null,sceneTagPos:{},lights:[{name:"燈1",intensity:"59%",kelvin:"4200K",note:""},{name:"燈2",intensity:"50%",kelvin:"4200K",note:""},{name:"燈3",intensity:"5%",kelvin:"4200K",note:""},{name:"燈4",intensity:"5%",kelvin:"4200K",note:""},{name:"燈5",intensity:"1%",kelvin:"2500K",note:""}],cameras:[{name:"C1",aperture:"F4.0",shutter:"1/60",iso:"iso400",kelvin:"4200k",note:"",img:null},{name:"C2",aperture:"F4.0",shutter:"1/60",iso:"iso400",kelvin:"4200k",note:"",img:null},{name:"C3",aperture:"F4.0",shutter:"1/60",iso:"iso400",kelvin:"4200k",note:"",img:null}],onairImg:null,onairNote:"",order:5},
-    {id:7,name:"展望會議 單人訪談",status:"就緒",sceneNote:"明亮、簡單，白板/反光板",sceneImg:null,sceneTagPos:{},lights:[{name:"主光",intensity:"100%",kelvin:"4800K",note:""},{name:"左輔",intensity:"50%",kelvin:"4800K",note:""},{name:"右補",intensity:"50%",kelvin:"4800K",note:"遮光片"}],cameras:[{name:"C1",aperture:"F4.0",shutter:"1/60",iso:"iso800",kelvin:"4500k",note:"",img:null},{name:"C2",aperture:"F7.1",shutter:"1/60",iso:"iso800",kelvin:"4500k",note:"",img:null}],onairImg:null,onairNote:"",order:6},
-    {id:8,name:"女人迷 公益影片",status:"就緒",sceneNote:"",sceneImg:null,sceneTagPos:{},lights:[{name:"主光1",intensity:"70%",kelvin:"4200K",note:""},{name:"主光2",intensity:"60%",kelvin:"4200K",note:""},{name:"主光3",intensity:"70%",kelvin:"4200K",note:""},{name:"窗光",intensity:"31%",kelvin:"4200K",note:""},{name:"勾邊",intensity:"1%",kelvin:"2500K",note:""},{name:"植物暖光",intensity:"15%",kelvin:"2700K",note:""}],cameras:[{name:"C1",aperture:"F2.4",shutter:"1/60",iso:"iso400",kelvin:"4200k",note:"",img:null},{name:"C2",aperture:"F2.4",shutter:"1/60",iso:"iso400",kelvin:"4200k",note:"",img:null}],onairImg:null,onairNote:"",order:7},
-    {id:9,name:"Computex 展前觀察室",status:"準備中",sceneNote:"",sceneImg:null,sceneTagPos:{},lights:[{name:"主燈1",intensity:"84%",kelvin:"4800K",note:""},{name:"主燈2",intensity:"85%",kelvin:"4800K",note:""},{name:"主燈3",intensity:"83%",kelvin:"4800K",note:""},{name:"側燈",intensity:"9%",kelvin:"3200K",note:""},{name:"補燈",intensity:"9%",kelvin:"4800K",note:""},{name:"色光1",intensity:"H210/S39",kelvin:"I7",note:""},{name:"色光2",intensity:"H214/S40",kelvin:"I11",note:""}],cameras:[{name:"C1",aperture:"F2",shutter:"1/60",iso:"6db",kelvin:"4800K",note:"",img:null},{name:"C2",aperture:"F2",shutter:"1/60",iso:"6db",kelvin:"4800K",note:"",img:null},{name:"C3",aperture:"F2",shutter:"1/60",iso:"6db",kelvin:"4800K",note:"",img:null}],onairImg:null,onairNote:"",order:8},
-    {id:10,name:"Tech666",status:"準備中",sceneNote:"",sceneImg:null,sceneTagPos:{},lights:[{name:"主燈1",intensity:"80%",kelvin:"5000K",note:""},{name:"主燈2",intensity:"80%",kelvin:"5000K",note:""},{name:"藍光",intensity:"",kelvin:"",note:""},{name:"橘光",intensity:"",kelvin:"",note:""}],cameras:[],onairImg:null,onairNote:"",order:9},
-    {id:11,name:"Red Hat 業務專案",status:"就緒",sceneNote:"",sceneImg:null,sceneTagPos:{},lights:[{name:"主燈",intensity:"100%",kelvin:"4200K",note:""},{name:"輔燈",intensity:"100%",kelvin:"4200K",note:""},{name:"背景",intensity:"40%",kelvin:"4200K",note:""},{name:"側1",intensity:"5%",kelvin:"4200K",note:""},{name:"側2",intensity:"10%",kelvin:"3000K",note:""},{name:"側3",intensity:"5%",kelvin:"4200K",note:""},{name:"側4",intensity:"10%",kelvin:"3000K",note:""}],cameras:[],onairImg:null,onairNote:"",order:10},
-    {id:12,name:"圖然說新場景",status:"就緒",sceneNote:"側邊改「藍窗框」",sceneImg:null,sceneTagPos:{},lights:[{name:"主燈1",intensity:"100%",kelvin:"4200K",note:""},{name:"主燈2",intensity:"100%",kelvin:"4200K",note:""},{name:"色光1",intensity:"H163/S42",kelvin:"i94%",note:""},{name:"色光2",intensity:"H258/S44",kelvin:"i62%",note:""},{name:"色光3",intensity:"H216/S44",kelvin:"i18%",note:""}],cameras:[{name:"C1",aperture:"F2.2",shutter:"1/60",iso:"",kelvin:"4200k",note:"",img:null},{name:"C2",aperture:"F2.4",shutter:"1/60",iso:"",kelvin:"4200k",note:"",img:null}],onairImg:null,onairNote:"",order:11},
-    {id:13,name:"新漢 NEXOne 領袖會客室",status:"就緒",sceneNote:"",sceneImg:null,sceneTagPos:{},lights:[{name:"主燈",intensity:"100%",kelvin:"3200K",note:""},{name:"輔燈",intensity:"100%",kelvin:"3200K",note:""},{name:"背景",intensity:"50%",kelvin:"3200K",note:""},{name:"側光",intensity:"6%",kelvin:"3200K",note:""},{name:"補光",intensity:"5%",kelvin:"3000K",note:""}],cameras:[],onairImg:null,onairNote:"",order:12},
-    {id:14,name:"Eric副總新節目",status:"準備中",sceneNote:"",sceneImg:null,sceneTagPos:{},lights:[{name:"主燈",intensity:"100%",kelvin:"5000K",note:""},{name:"輔燈",intensity:"80%",kelvin:"5000K",note:""},{name:"補燈1",intensity:"30%",kelvin:"5000K",note:""},{name:"補燈2",intensity:"8%",kelvin:"5000K",note:""},{name:"勾邊",intensity:"10%",kelvin:"5000K",note:""}],cameras:[{name:"C1",aperture:"F2.2",shutter:"1/60",iso:"",kelvin:"4400k",note:"4K拍亮一點",img:null}],onairImg:null,onairNote:"",order:13},
-    {id:15,name:"自動化展前訪談",status:"準備中",sceneNote:"",sceneImg:null,sceneTagPos:{},lights:[{name:"主燈1",intensity:"100%",kelvin:"4800K",note:""},{name:"主燈2",intensity:"100%",kelvin:"4800K",note:""},{name:"側燈",intensity:"5%",kelvin:"4800K",note:""},{name:"勾邊",intensity:"1%",kelvin:"3200K",note:""},{name:"補燈",intensity:"5%",kelvin:"4800K",note:""}],cameras:[],onairImg:null,onairNote:"",order:14},
-    {id:16,name:"AI EXPO 2026 創作之巔",status:"準備中",sceneNote:"",sceneImg:null,sceneTagPos:{},lights:[{name:"主燈1",intensity:"50%",kelvin:"3200K",note:""},{name:"主燈2",intensity:"50%",kelvin:"3200K",note:""},{name:"補燈1",intensity:"4%",kelvin:"3200K",note:""},{name:"補燈2",intensity:"3%",kelvin:"3200K",note:""}],cameras:[{name:"C1",aperture:"",shutter:"",iso:"",kelvin:"3400K",note:"",img:null},{name:"C2",aperture:"",shutter:"",iso:"",kelvin:"3500K",note:"",img:null},{name:"C3",aperture:"",shutter:"",iso:"",kelvin:"3400K",note:"",img:null}],onairImg:null,onairNote:"",order:15},
-    {id:17,name:"IC之音 神話1",status:"就緒",sceneNote:"",sceneImg:null,sceneTagPos:{},lights:[{name:"主燈",intensity:"50%",kelvin:"3400K",note:""},{name:"補燈1",intensity:"7%",kelvin:"3400K",note:""},{name:"補燈2",intensity:"5%",kelvin:"3400K",note:""},{name:"勾邊",intensity:"4%",kelvin:"2800K",note:""}],cameras:[],onairImg:null,onairNote:"",order:16},
-    {id:18,name:"IC之音 神話2",status:"就緒",sceneNote:"",sceneImg:null,sceneTagPos:{},lights:[{name:"主燈",intensity:"50%",kelvin:"3400K",note:""},{name:"補燈1",intensity:"7%",kelvin:"3400K",note:""},{name:"補燈2",intensity:"5%",kelvin:"3400K",note:""}],cameras:[],onairImg:null,onairNote:"",order:17},
-  ];
-  await Promise.all(D.map(p => setDoc(docRef(p.id), p)));
-})();
-
-// ── HELPERS ──
-function getP(id) { return programs.find(p=>p.id===id); }
-function esc(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-function toast(msg) {
-  const el=document.getElementById('toast');
-  el.textContent=msg; el.classList.add('show');
-  clearTimeout(el._t); el._t=setTimeout(()=>el.classList.remove('show'),2000);
-}
-
-// ── PROGRAMS ──
-function addProgram() {
-  const name=prompt('節目名稱：'); if(!name) return;
-  const p={id:nextId++,name,status:'準備中',sceneNote:'',sceneImg:null,sceneTagPos:{},lights:[{name:'主燈',intensity:'',kelvin:'',note:''}],cameras:[],onairImg:null,onairNote:'',order:programs.length};
-  activeId=p.id; activeTab='scene';
-  saveProgram(p);
-}
-function deleteProgram(id) {
-  if(!confirm('確定刪除此節目？')) return;
-  const rem=programs.filter(p=>p.id!==id);
-  activeId=rem[0]?.id??null;
-  removeProgram(id);
-}
-
-// ── RENDER ──
-function render() { renderNav(); renderMobileNav(); renderMain(); }
-
-function renderNav() {
-  const nav = document.getElementById('navList'); if (!nav) return;
-  const CATS = [
-    { key: 'real',  label: '實景棚', dotCls: 'real',  labelCls: 'real' },
-    { key: 'green', label: '綠幕棚', dotCls: 'green', labelCls: 'green' },
-    { key: '',      label: '未分類', dotCls: 'none',  labelCls: 'none' },
-  ];
-  let html = '';
-  CATS.forEach(cat => {
-    const items = programs.filter(p => (p.studioType||'') === cat.key);
-    if (cat.key === '' && items.length === 0) return; // 沒有未分類就不顯示
-    html += `<div class="nav-category" data-cat="${cat.key}"
->
-      <span class="nav-category-dot ${cat.dotCls}"></span>
-      <span class="nav-category-label ${cat.labelCls}">${cat.label}</span>
-    </div>`;
-    items.forEach(p => {
-      html += `<div class="nav-item ${p.id===activeId?'active':''}" data-id="${p.id}" data-name="${esc(p.name.toLowerCase())}"
-        draggable="true" onclick="navClick(event,${p.id})"
-        ondragstart="navDragStart(event,${p.id})" ondragover="navDragOver(event)"
-        ondragleave="navDragLeave(event)" ondrop="navDrop(event,${p.id})" ondragend="navDragEnd()">
-        <span class="drag-handle">⠿</span>
-        <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.name)}</span>
-      </div>`;
-    });
-  });
-  nav.innerHTML = html;
-}
-function renderMobileNav() {
-  const p = getP(activeId);
-  const t = document.getElementById('mobileNavTitle'); if (t && p) t.textContent = p.name;
-  const list = document.getElementById('mobileNavList'); if (!list) return;
-  const CATS = [
-    { key: 'real',  label: '實景棚', labelCls: 'real' },
-    { key: 'green', label: '綠幕棚', labelCls: 'green' },
-    { key: '',      label: '未分類', labelCls: 'none' },
-  ];
-  let html = '';
-  CATS.forEach(cat => {
-    const items = programs.filter(p => (p.studioType||'') === cat.key);
-    if (cat.key === '' && items.length === 0) return;
-    html += `<div class="nav-category">
-      <span class="nav-category-dot ${cat.key||'none'}"></span>
-      <span class="nav-category-label ${cat.labelCls}">${cat.label}</span>
-    </div>`;
-    items.forEach(prog => {
-      html += `<div class="nav-item ${prog.id===activeId?'active':''}" data-id="${prog.id}"
-        onclick="setActiveId(${prog.id});setActiveTab('scene');closeMobileNav();render()">
-        <span class="dot"></span>
-        <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(prog.name)}</span>
-      </div>`;
-    });
-  });
-  list.innerHTML = html;
-}
-function renderMain() {
-  const p=getP(activeId), area=document.getElementById('mainArea'); if(!area) return;
-  if(!p){area.innerHTML='<div style="padding:40px;color:#555;font-size:14px;">請選擇或新增節目</div>';return;}
-  area.innerHTML=`
-    <div class="main-header">
-      <div class="main-header-left">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
-          <div class="type-sel-wrap" title="點選切換棚別">
-            <span class="type-sel-dot ${p.studioType==='real'?'real':p.studioType==='green'?'green':'none'}"></span>
-            <span class="type-sel-label ${p.studioType==='real'?'real':p.studioType==='green'?'green':'none'}">${p.studioType==='real'?'實景棚':p.studioType==='green'?'綠幕棚':'棚別'}</span>
-            <select onchange="getP(${p.id}).studioType=this.value;debouncedSave(getP(${p.id}));renderNav();renderMobileNav();renderMain()">
-              <option value="" ${!p.studioType?'selected':''}>未分類</option>
-              <option value="real" ${p.studioType==='real'?'selected':''}>實景棚</option>
-              <option value="green" ${p.studioType==='green'?'selected':''}>綠幕棚</option>
-            </select>
-          </div>
-          <input class="editable-title" value="${esc(p.name)}"
-            oninput="getP(${p.id}).name=this.value;renderNav();renderMobileNav();debouncedSave(getP(${p.id}))">
-        </div>
-        <input class="scene-note-input" placeholder="場景說明備註…" value="${esc(p.sceneNote)}"
-          oninput="getP(${p.id}).sceneNote=this.value;debouncedSave(getP(${p.id}))">
-      </div>
-      <div class="header-actions">
-        <select class="status-sel" onchange="getP(${p.id}).status=this.value;saveProgram(getP(${p.id}))">
-          ${['調整中','就緒','上線中'].map(s=>`<option ${p.status===s?'selected':''}>${s}</option>`).join('')}
-        </select>
-        <button class="btn btn-danger" onclick="deleteProgram(${p.id})">刪除</button>
-      </div>
-    </div>
-    <div class="section-tabs">
-      <div class="stab ${activeTab==='scene'?'active':''}" onclick="setActiveTab('scene');renderMain()">場景圖 ＋ 燈光</div>
-      <div class="stab ${activeTab==='camera'?'active':''}" onclick="setActiveTab('camera');renderMain()">攝影機設定</div>
-      <div class="stab ${activeTab==='onair'?'active':''}" onclick="setActiveTab('onair');renderMain()">上線畫面</div>
-    </div>
-    ${activeTab==='scene'?renderScene(p):activeTab==='camera'?renderCamera(p):renderOnair(p)}`;
-  // 等 DOM 更新後夾回超出邊界的標籤
-  if (activeTab === 'scene') requestAnimationFrame(() => clampTags(p.id));
-}
-
-function renderScene(p) {
-  if (!p.sceneImgs) p.sceneImgs = p.sceneImg ? [{src:p.sceneImg,label:'佈光圖'}] : [];
-
-  // 依棚別決定燈光配置
-  const isGreenStudio = p.studioType === 'green';
-
-  // 顏色 → CSS class
-  const colorClass = c => ({'orange':'c-orange','yellow':'c-yellow','blue':'c-blue','white':'c-white'}[c]||'c-orange');
-
-  const FIXED_LIGHTS_DEF = isGreenStudio ? [
-    {key:'G1',group:'green'},{key:'G2',group:'green'},{key:'G3',group:'green'},
-  ] : [
-    {key:'A1',group:'yellow'},{key:'A2',group:'yellow'},
-    {key:'B1',group:'blue'},{key:'B2',group:'blue'},
-    {key:'C1',group:'green'},{key:'C2',group:'green'},{key:'C3',group:'green'},
-  ];
-  const tags = p.lights.map((l,i)=>{
-    if (l.on === false) return ''; // 關閉的燈不顯示標籤
-    const group = (FIXED_LIGHTS_DEF[i]||{}).group || 'yellow';
-    const cls = `c-${group}`;
-    let pos = (p.sceneTagPos||{})[i];
-    let posStyle;
-    if (pos && typeof pos.leftPct === 'number') {
-      posStyle = `left:${pos.leftPct}%;top:${pos.topPct}%`;
-    } else if (pos && pos.left) {
-      posStyle = `left:${pos.left};top:${pos.top}`;
-    } else {
-      const defaultLeft = Math.min(5 + (i % 4) * 22, 72);
-      const defaultTop  = 5 + Math.floor(i / 4) * 22;
-      posStyle = `left:${defaultLeft}%;top:${defaultTop}%`;
-    }
-    const isRGB = l.isRGB || false;
-    if (isRGB) {
-      return `<div class="light-tag ${cls}" id="ltag-${i}" style="${posStyle}"
-        onmousedown="startDrag(event,${p.id},${i})" ontouchstart="startTouchDrag(event,${p.id},${i})">
-        <span class="tag-dot"></span>
-        <span class="tag-values">
-          <span class="tag-val" contenteditable="true"
-            oninput="getP(${p.id}).lights[${i}].intensity=this.innerText.trim();debouncedSave(getP(${p.id}))"
-            onclick="event.stopPropagation()">${esc(l.intensity||'H—')}</span>
-          <span class="tag-sep">/</span>
-          <span class="tag-val" contenteditable="true"
-            oninput="getP(${p.id}).lights[${i}].kelvin=this.innerText.trim();debouncedSave(getP(${p.id}))"
-            onclick="event.stopPropagation()">${esc(l.kelvin||'S—')}</span>
-          <span class="tag-sep">/</span>
-          <span class="tag-val" contenteditable="true"
-            oninput="getP(${p.id}).lights[${i}].intensity2=this.innerText.trim();debouncedSave(getP(${p.id}))"
-            onclick="event.stopPropagation()">${esc(l.intensity2||'i—')}</span>
-        </span></div>`;
-    }
-    return `<div class="light-tag ${cls}" id="ltag-${i}" style="${posStyle}"
-      onmousedown="startDrag(event,${p.id},${i})" ontouchstart="startTouchDrag(event,${p.id},${i})">
-      <span class="tag-dot"></span>
-      <span class="tag-values">
-        <span class="tag-val" contenteditable="true"
-          oninput="getP(${p.id}).lights[${i}].intensity=this.innerText.trim();debouncedSave(getP(${p.id}))"
-          onclick="event.stopPropagation()">${esc(l.intensity||'—')}</span>
-        <span class="tag-sep">/</span>
-        <span class="tag-val" contenteditable="true"
-          oninput="getP(${p.id}).lights[${i}].kelvin=this.innerText.trim();debouncedSave(getP(${p.id}))"
-          onclick="event.stopPropagation()">${esc(l.kelvin||'—')}</span>
-      </span></div>`;
-  }).join('');
-
-  const slides = p.sceneImgs.map((img,si)=>`
-    <div class="gallery-slide" id="sceneZone${p.id}_${si}">
-      <img src="${img.src}" draggable="false">
-      ${si===0 ? tags : ''}
-      <div class="slide-label">
-        <input value="${esc(img.label||'')}" placeholder="圖片說明（佈光圖、場佈圖…）"
-          oninput="getP(${p.id}).sceneImgs[${si}].label=this.value;debouncedSave(getP(${p.id}))"
-          onclick="event.stopPropagation()">
-        <button class="slide-del" onclick="removeSceneImg(${p.id},${si})">✕</button>
-      </div>
-    </div>`).join('');
-
-  // 依棚別選擇燈光配置
-  const FIXED_LIGHTS = isGreenStudio ? [
-    {key:'G1', label:'G1 (200x)', group:'green'},
-    {key:'G2', label:'G2 (200x)', group:'green'},
-    {key:'G3', label:'G3 (200x)', group:'green'},
-  ] : [
-    {key:'A1', label:'A1 (360c)', group:'yellow'},
-    {key:'A2', label:'A2 (360c)', group:'yellow'},
-    {key:'B1', label:'B1 (300c)', group:'blue'},
-    {key:'B2', label:'B2 (300c)', group:'blue'},
-    {key:'C1', label:'C1 (200x)', group:'green'},
-    {key:'C2', label:'C2 (200x)', group:'green'},
-    {key:'C3', label:'C3 (200x)', group:'green'},
-  ];
-  const lightCount = FIXED_LIGHTS.length;
-  // 確保 p.lights 有正確數量並對應 key
-  FIXED_LIGHTS.forEach((def, i) => {
-    if (!p.lights[i]) p.lights[i] = {};
-    const l = p.lights[i];
-    if (!l.key || l.key !== def.key) l.key = def.key;
-    if (l.group === undefined || isGreenStudio) l.group = def.group;
-    if (l.on === undefined) l.on = true;
-    if (l.fixture === undefined) l.fixture = '';
-    if (l.honeycomb === undefined) l.honeycomb = false;
-    if (l.isRGB === undefined) l.isRGB = false;
-  });
-  // 只保留對應數量
-  p.lights = p.lights.slice(0, lightCount);
-
-  const FIXTURES = ['圓','方','球','傘','標'];
-  const lightCards = p.lights.map((l, i) => {
-    const def = FIXED_LIGHTS[i];
-    const isOn = l.on !== false;
-    const isRGB = l.isRGB || false;
-    const group = def.group;
-    const colorClass = `g-${group}`;
-    const tagColor = group === 'yellow' ? 'c-yellow' : group === 'blue' ? 'c-blue' : 'c-green';
-    const showHoneycomb = l.fixture === '圓' || l.fixture === '方';
-
-    const fixtureButtons = FIXTURES.map(f =>
-      `<button class="fixture-btn${l.fixture===f?' active':''}"
-        onclick="setFixture(${p.id},${i},'${f}')">${f}</button>`
-    ).join('');
-
-    return `<div class="light-card ${colorClass}${isOn?' on':' off'}">
-      <div class="light-card-top">
-        <div class="lc-name-row">
-          <button class="power-btn${isOn?' on':''}" onclick="togglePower(${p.id},${i})" title="${isOn?'關閉':'開啟'}燈光">⏻</button>
-          <span class="light-card-name">${esc(def.label)}</span>
-          <div class="rgb-toggle${isRGB?' on':''}" onclick="setLightRGB(${p.id},${i},${!isRGB})" title="RGB 模式">
-            <span class="rgb-dot"></span>
-            <span class="rgb-label">RGB</span>
-          </div>
-        </div>
-      </div>
-      ${isRGB ? `
-      <div class="light-fields">
-        <div class="lf"><label>H 色相</label><input value="${esc(l.intensity||'')}" placeholder="258"
-          oninput="getP(${p.id}).lights[${i}].intensity=this.value;updateTag(${p.id},${i});debouncedSave(getP(${p.id}))"
-          onchange="this.value=fmtH(this.value);getP(${p.id}).lights[${i}].intensity=this.value;updateTag(${p.id},${i});debouncedSave(getP(${p.id}))"></div>
-        <div class="lf"><label>S 飽和</label><input value="${esc(l.kelvin||'')}" placeholder="58"
-          oninput="getP(${p.id}).lights[${i}].kelvin=this.value;updateTag(${p.id},${i});debouncedSave(getP(${p.id}))"
-          onchange="this.value=fmtS(this.value);getP(${p.id}).lights[${i}].kelvin=this.value;updateTag(${p.id},${i});debouncedSave(getP(${p.id}))"></div>
-        <div class="lf"><label>I 亮度</label><input value="${esc(l.intensity2||'')}" placeholder="62"
-          oninput="getP(${p.id}).lights[${i}].intensity2=this.value;updateTag(${p.id},${i});debouncedSave(getP(${p.id}))"
-          onchange="this.value=fmtI(this.value);getP(${p.id}).lights[${i}].intensity2=this.value;updateTag(${p.id},${i});debouncedSave(getP(${p.id}))"></div>
-        <div class="lf full"><label>備註</label><input value="${esc(l.note||'')}" placeholder="選填"
-          oninput="getP(${p.id}).lights[${i}].note=this.value;debouncedSave(getP(${p.id}))"></div>
-      </div>` : `
-      <div class="light-fields">
-        <div class="lf"><label>強度</label><input value="${esc(l.intensity||'')}" placeholder="80"
-          oninput="getP(${p.id}).lights[${i}].intensity=this.value;updateTag(${p.id},${i});debouncedSave(getP(${p.id}))"
-          onchange="this.value=fmtPct(this.value);getP(${p.id}).lights[${i}].intensity=this.value;updateTag(${p.id},${i});debouncedSave(getP(${p.id}))"></div>
-        <div class="lf"><label>色溫</label><input value="${esc(l.kelvin||'')}" placeholder="4200"
-          oninput="getP(${p.id}).lights[${i}].kelvin=this.value;updateTag(${p.id},${i});debouncedSave(getP(${p.id}))"
-          onchange="this.value=fmtK(this.value);getP(${p.id}).lights[${i}].kelvin=this.value;updateTag(${p.id},${i});debouncedSave(getP(${p.id}))"></div>
-        <div class="lf full"><label>備註</label><input value="${esc(l.note||'')}" placeholder="選填"
-          oninput="getP(${p.id}).lights[${i}].note=this.value;debouncedSave(getP(${p.id}))"></div>
-      </div>`}
-      <div class="fixture-row">${fixtureButtons}</div>
-      ${showHoneycomb ? `<div class="honeycomb-row">
-        <label><input type="checkbox" ${l.honeycomb?'checked':''}
-          onchange="setHoneycomb(${p.id},${i},this.checked)"> 蜂巢</label>
-      </div>` : ''}
-    </div>`;
-  }).join('');
-
-  return `<div class="panel active">
-    <div class="sec-label">場景圖片 <span style="color:#555;font-size:10px;text-transform:none">← 左右滑動・第一張可拖移燈光標籤 →</span></div>
-    <div class="gallery-slider" id="sceneSlider${p.id}">
-      ${slides}
-      <div class="gallery-add-slide" id="sceneDropZone${p.id}"
-        onclick="document.getElementById('sceneFileAdd${p.id}').click()"
-        ondragover="event.preventDefault();this.classList.add('drag-over')"
-        ondragleave="this.classList.remove('drag-over')"
-        ondrop="this.classList.remove('drag-over');dropFiles(event,'scene',${p.id})">
-        <span>＋</span><span>拖放或點擊</span><span style="font-size:10px;color:#555">新增圖片</span>
-      </div>
-    </div>
-    <input type="file" accept="image/*" multiple id="sceneFileAdd${p.id}" style="display:none"
-      onchange="addSceneImgs(${p.id},this)">
-    <div class="scene-caption">
-      <input placeholder="圖說備註（例：展前佈光圖，最後更新 2026/04/23）" value="${esc(p.sceneCaption||'')}"
-        oninput="getP(${p.id}).sceneCaption=this.value;debouncedSave(getP(${p.id}))">
-    </div>
-    <div class="panel-gap">
-      <div class="sec-label">燈光設定</div>
-      <div class="lights-grid">${lightCards}</div>
-    </div>
-  </div>`;
-}
-
-function renderCamera(p) {
-  // 確保預設三台攝影機
-  const DEFAULT_CAMS = ['Full','Guest','Host'];
-  if (!p.cameras || p.cameras.length === 0) {
-    p.cameras = DEFAULT_CAMS.map(name => ({name, note:'', aperture:'', shutter:'', iso:'', kelvin:'', img:null}));
-  }
-
-  const slides = p.cameras.map((c,i) => `
-    <div class="cam-slide">
-      <div class="cam-slide-img"
-        onclick="document.getElementById('camFile${p.id}_${i}').click()"
-        ondragover="event.preventDefault();this.classList.add('drag-over')"
-        ondragleave="this.classList.remove('drag-over')"
-        ondrop="this.classList.remove('drag-over');dropCamFile(event,${p.id},${i})">
-        ${c.img
-          ? `<img src="${c.img}"><span class="img-change-btn" onclick="event.stopPropagation();document.getElementById('camFile${p.id}_${i}').click()">更換圖片</span>`
-          : `<div class="cam-img-hint"><span>＋</span><span>拖放或點擊上傳</span></div>`}
-      </div>
-      <input type="file" accept="image/*" id="camFile${p.id}_${i}" style="display:none" onchange="handleCamImg(${p.id},${i},this)">
-      <div class="cam-slide-info">
-        <div class="cam-slide-header">
-          <input class="cam-slide-name" value="${esc(c.name)}"
-            oninput="getP(${p.id}).cameras[${i}].name=this.value;debouncedSave(getP(${p.id}))">
-          <button class="slide-del" onclick="removeCam(${p.id},${i})">✕</button>
-        </div>
-        <div class="cam-specs" style="grid-template-columns:repeat(4,1fr) 1.3fr 1.3fr">
-          <div class="cam-spec"><label>焦段</label><input value="${esc(c.focal||'')}" placeholder="24mm"
-            oninput="getP(${p.id}).cameras[${i}].focal=this.value;debouncedSave(getP(${p.id}))"></div>
-          <div class="cam-spec"><label>光圈</label><input value="${esc(c.aperture||'')}" placeholder="F2.8"
-            oninput="getP(${p.id}).cameras[${i}].aperture=this.value;debouncedSave(getP(${p.id}))"></div>
-          <div class="cam-spec"><label>快門</label><input value="${esc(c.shutter||'')}" placeholder="1/60"
-            oninput="getP(${p.id}).cameras[${i}].shutter=this.value;debouncedSave(getP(${p.id}))"></div>
-          <div class="cam-spec"><label>ISO</label><input value="${esc(c.iso||'')}" placeholder="0db"
-            oninput="getP(${p.id}).cameras[${i}].iso=this.value;debouncedSave(getP(${p.id}))"></div>
-          <div class="cam-spec"><label>色溫</label><input value="${esc(c.kelvin||'')}" placeholder="4200K"
-            oninput="getP(${p.id}).cameras[${i}].kelvin=this.value;debouncedSave(getP(${p.id}))"></div>
-          <div class="cam-spec"><label>機型</label><input value="${esc(c.note||'')}" placeholder="SONY Z190"
-            oninput="getP(${p.id}).cameras[${i}].note=this.value;debouncedSave(getP(${p.id}))"></div>
-        </div>
-      </div>
-    </div>`).join('');
-
-  return `<div class="panel active">
-    <div class="sec-label">攝影機設定 <span style="color:#555;font-size:10px;text-transform:none">← 左右滑動 →</span></div>
-    <div class="gallery-slider vertical" id="camSlider${p.id}">
-      ${slides}
-      <div class="gallery-add-slide"
-        onclick="addCam(${p.id})"
-        ondragover="event.preventDefault();this.classList.add('drag-over')"
-        ondragleave="this.classList.remove('drag-over')">
-        <span>＋</span><span>新增攝影機</span>
-      </div>
-    </div>
-  </div>`;
-}
-
-function renderOnair(p) {
-  if (!p.onairImgs) p.onairImgs = p.onairImg ? [{src:p.onairImg,label:'Full',shot:''}] : [];
-  // 確保預設三張
-  if (p.onairImgs.length === 0) {
-    p.onairImgs = [{src:null,label:'Full',shot:''},{src:null,label:'Guest',shot:''},{src:null,label:'Host',shot:''}];
-  }
-
-  const SHOTS = ['全景','中景','特寫'];
-
-  const slides = p.onairImgs.map((img,i) => `
-    <div class="onair-slide">
-      <div class="onair-slide-img"
-        onclick="document.getElementById('onairFile${p.id}_${i}').click()"
-        ondragover="event.preventDefault();this.classList.add('drag-over')"
-        ondragleave="this.classList.remove('drag-over')"
-        ondrop="this.classList.remove('drag-over');dropOnairFile(event,${p.id},${i})">
-        ${img.src
-          ? `<img src="${img.src}"><span class="img-change-btn" onclick="event.stopPropagation();document.getElementById('onairFile${p.id}_${i}').click()">更換圖片</span>`
-          : `<div class="onair-hint"><span>🎬</span><span>拖放或點擊上傳</span></div>`}
-      </div>
-      <input type="file" accept="image/*" id="onairFile${p.id}_${i}" style="display:none"
-        onchange="handleOnairImg(${p.id},${i},this)">
-      <div class="onair-slide-info">
-        <div class="onair-slide-header">
-          <input class="onair-slide-name" value="${esc(img.label||'')}" placeholder="名稱"
-            oninput="getP(${p.id}).onairImgs[${i}].label=this.value;debouncedSave(getP(${p.id}))"
-            onclick="event.stopPropagation()">
-          <button class="slide-del" onclick="removeOnairImg(${p.id},${i})">✕</button>
-        </div>
-        <div class="shot-type-row">
-          ${SHOTS.map(s=>`<button class="shot-btn${img.shot===s?' active':''}"
-            onclick="event.stopPropagation();getP(${p.id}).onairImgs[${i}].shot='${img.shot===s?'':s}';debouncedSave(getP(${p.id}));renderMain()">${s}</button>`).join('')}
-        </div>
-      </div>
-    </div>`).join('');
-
-  return `<div class="panel active">
-    <div class="sec-label">上線畫面 <span style="color:#555;font-size:10px;text-transform:none">← 左右滑動 →</span></div>
-    <div class="gallery-slider vertical" id="onairSlider${p.id}">
-      ${slides}
-      <div class="gallery-add-slide" id="onairDropZone${p.id}"
-        onclick="addOnairSlide(${p.id})"
-        ondragover="event.preventDefault();this.classList.add('drag-over')"
-        ondragleave="this.classList.remove('drag-over')"
-        ondrop="this.classList.remove('drag-over');dropOnairNew(event,${p.id})">
-        <span>🎬</span><span>新增畫面</span>
-      </div>
-    </div>
-    <textarea class="note-area" rows="3" placeholder="上線備註、注意事項…"
-      oninput="getP(${p.id}).onairNote=this.value;debouncedSave(getP(${p.id}))">${esc(p.onairNote)}</textarea>
-  </div>`;
-}
-
-// ── IMAGE COMPRESS ──
-function compressImg(file, maxW, quality) {
-  return new Promise(resolve => {
-    const r = new FileReader();
-    r.onload = e => {
-      const img = new Image();
-      img.onload = () => {
-        const scale = Math.min(1, maxW / img.width);
-        const w = Math.round(img.width * scale);
-        const h = Math.round(img.height * scale);
-        const canvas = document.createElement('canvas');
-        canvas.width = w; canvas.height = h;
-        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-        resolve(canvas.toDataURL('image/jpeg', quality));
-      };
-      img.src = e.target.result;
-    };
-    r.readAsDataURL(file);
-  });
-}
-
-// ── CLOUDINARY UPLOAD ──
-async function uploadToCloud(base64) {
-  const fd = new FormData();
-  fd.append('file', base64);
-  fd.append('upload_preset', CLD_PRESET);
-  fd.append('folder', 'dt-studio');
-  const res = await fetch(CLD_URL, { method: 'POST', body: fd });
-  if (!res.ok) throw new Error('Cloudinary 上傳失敗 ' + res.status);
-  const data = await res.json();
-  return data.secure_url;
-}
-
-async function handleImg(id, field, input) {
-  const file = input.files[0]; if (!file) return;
-  setSyncStatus('saving', '上傳圖片中…');
-  try {
-    const base64 = await compressImg(file, 1400, 0.85);
-    const url = await uploadToCloud(base64);
-    const p = getP(id); p[field] = url;
-    renderMain(); saveProgram(p);
-  } catch(e) {
-    setSyncStatus('error', '圖片上傳失敗');
-    toast('圖片上傳失敗：' + (e.message || e.code));
-  }
-}
-
-async function addSceneImgs(id, input) {
-  const p = getP(id);
-  if (!p.sceneImgs) p.sceneImgs = [];
-  const files = Array.from(input.files);
-  setSyncStatus('saving', `上傳 ${files.length} 張圖片中…`);
-  try {
-    for (let i = 0; i < files.length; i++) {
-      toast(`上傳第 ${i+1}/${files.length} 張…`);
-      const base64 = await compressImg(files[i], 1400, 0.85);
-      const url = await uploadToCloud(base64);
-      p.sceneImgs.push({ src: url, label: '' });
-    }
-    renderMain(); saveProgram(p);
-  } catch(e) {
-    setSyncStatus('error', '圖片上傳失敗');
-    toast('上傳失敗：' + (e.message || e.code));
-    renderMain();
-  }
-}
-
-function removeSceneImg(id, idx) {
-  const p = getP(id);
-  p.sceneImgs.splice(idx, 1);
-  renderMain(); saveProgram(p);
-}
-
-async function addOnairImgs(id, input) {
-  const p = getP(id);
-  if (!p.onairImgs) p.onairImgs = [];
-  const files = Array.from(input.files);
-  setSyncStatus('saving', `上傳 ${files.length} 張圖片中…`);
-  try {
-    for (let i = 0; i < files.length; i++) {
-      toast(`上傳第 ${i+1}/${files.length} 張…`);
-      const base64 = await compressImg(files[i], 1400, 0.85);
-      const url = await uploadToCloud(base64);
-      p.onairImgs.push({ src: url, label: files[i].name.replace(/\.[^.]+$/, '') });
-    }
-    renderMain(); saveProgram(p);
-  } catch(e) {
-    setSyncStatus('error', '圖片上傳失敗');
-    toast('上傳失敗：' + (e.message || e.code));
-    renderMain();
-  }
-}
-
-function removeOnairImg(id, idx) {
-  const p = getP(id);
-  p.onairImgs.splice(idx, 1);
-  renderMain(); saveProgram(p);
-}
-
-// ── DROP HANDLERS ──
-function dropFiles(event, type, id) {
-  event.preventDefault();
-  const files = Array.from(event.dataTransfer.files).filter(f => f.type.startsWith('image/'));
-  if (!files.length) return;
-  // create a fake input-like object
-  const fakeInput = { files };
-  if (type === 'scene') addSceneImgs(id, fakeInput);
-  else addOnairImgs(id, fakeInput);
-}
-function dropCamFile(event, id, idx) {
-  event.preventDefault();
-  const file = Array.from(event.dataTransfer.files).find(f => f.type.startsWith('image/'));
-  if (!file) return;
-  handleCamImg(id, idx, { files: [file] });
-}
-
-async function handleCamImg(id, idx, input) {
-  const file = input.files[0]; if (!file) return;
-  setSyncStatus('saving', '上傳圖片中…');
-  try {
-    const base64 = await compressImg(file, 1200, 0.85);
-    const url = await uploadToCloud(base64);
-    const p = getP(id); p.cameras[idx].img = url;
-    renderMain(); saveProgram(p);
-  } catch(e) {
-    setSyncStatus('error', '圖片上傳失敗');
-    toast('圖片上傳失敗：' + (e.message || e.code));
-  }
-}
-
-// ── LIGHT VALUE FORMATTERS ──
-// 輸入純數字自動補單位，已有單位則保留原樣
-function fmtPct(v) {
-  v = v.trim(); if (!v) return v;
-  return /^\d+(\.\d+)?$/.test(v) ? v + '%' : v;
-}
-function fmtK(v) {
-  v = v.trim(); if (!v) return v;
-  return /^\d+(\.\d+)?$/.test(v) ? v + 'K' : v;
-}
-function fmtH(v) {
-  v = v.trim(); if (!v) return v;
-  return /^\d+(\.\d+)?$/.test(v) ? 'H' + v : v;
-}
-function fmtS(v) {
-  v = v.trim(); if (!v) return v;
-  return /^\d+(\.\d+)?$/.test(v) ? 'S' + v : v;
-}
-function fmtI(v) {
-  v = v.trim(); if (!v) return v;
-  // 純數字 → I62%；已有 I 前綴 → 補 %；已完整 → 原樣
-  if (/^\d+(\.\d+)?$/.test(v)) return 'I' + v + '%';
-  if (/^[Ii]\d+(\.\d+)?$/.test(v)) return v.toUpperCase() + '%';
-  return v;
-}
-
-// ── ONAIR / CAM HELPERS ──
-function addOnairSlide(id) {
-  const p = getP(id);
-  if (!p.onairImgs) p.onairImgs = [];
-  // 智慧命名：找最後一個名稱的基底，遞增編號
-  const BASE = ['Full','Guest','Host'];
-  const last = p.onairImgs[p.onairImgs.length - 1];
-  let newLabel = 'Full';
-  if (last && last.label) {
-    // 嘗試找 base 名
-    const match = last.label.match(/^(.+?)(\s*\d+)?$/);
-    const base = match ? match[1].trim() : last.label;
-    const count = p.onairImgs.filter(s => (s.label||'').startsWith(base)).length;
-    newLabel = `${base} ${count + 1}`;
-  }
-  p.onairImgs.push({ src: null, label: newLabel, shot: '' });
-  renderMain(); saveProgram(p);
-}
-
-async function handleOnairImg(id, idx, input) {
-  const file = input.files[0]; if (!file) return;
-  setSyncStatus('saving', '上傳圖片中…');
-  try {
-    const base64 = await compressImg(file, 1400, 0.85);
-    const url = await uploadToCloud(base64);
-    const p = getP(id);
-    if (!p.onairImgs[idx]) p.onairImgs[idx] = { label:'', shot:'' };
-    p.onairImgs[idx].src = url;
-    // 不用檔名覆蓋 label，保留使用者設定的名稱
-    renderMain(); saveProgram(p);
-  } catch(e) { setSyncStatus('error','上傳失敗'); toast('上傳失敗：' + e.message); }
-}
-
-async function dropOnairFile(id, idx, event) {
-  const file = Array.from(event.dataTransfer.files).find(f => f.type.startsWith('image/'));
-  if (!file) return;
-  await handleOnairImg(id, idx, { files: [file] });
-}
-
-async function dropOnairNew(event, id) {
-  const files = Array.from(event.dataTransfer.files).filter(f => f.type.startsWith('image/'));
-  if (!files.length) { addOnairSlide(id); return; }
-  const p = getP(id);
-  if (!p.onairImgs) p.onairImgs = [];
-  setSyncStatus('saving', `上傳 ${files.length} 張…`);
-  for (const file of files) {
-    const base64 = await compressImg(file, 1400, 0.85);
-    const url = await uploadToCloud(base64);
-    p.onairImgs.push({ src: url, label: '', shot: '' });
-  }
-  renderMain(); saveProgram(p);
-}
-function togglePower(id, idx) {
-  const p = getP(id);
-  p.lights[idx].on = !(p.lights[idx].on !== false);
-  renderMain(); debouncedSave(p);
-}
-function setFixture(id, idx, fixture) {
-  const p = getP(id);
-  p.lights[idx].fixture = p.lights[idx].fixture === fixture ? '' : fixture;
-  p.lights[idx].honeycomb = false; // 換燈具時重置蜂巢
-  renderMain(); debouncedSave(p);
-}
-function setHoneycomb(id, idx, val) {
-  const p = getP(id);
-  p.lights[idx].honeycomb = val;
-  debouncedSave(p);
-}
-function setLightRGB(id, idx, isRGB) {
-  const p = getP(id); p.lights[idx].isRGB = isRGB;
-  renderMain(); debouncedSave(p);
-}
-
-// ── TAG SYNC ──
-function updateTag(pid,idx){
-  const el=document.getElementById(`ltag-${idx}`);if(!el)return;
-  const l=getP(pid).lights[idx];
-  const vals=el.querySelectorAll('.tag-val');
-  if(vals[0]&&document.activeElement!==vals[0])vals[0].innerText=l.intensity||'—';
-  if(vals[1]&&document.activeElement!==vals[1])vals[1].innerText=l.kelvin||'—';
-  if(vals[2]&&document.activeElement!==vals[2])vals[2].innerText=l.intensity2||'—';
-}
-
-// ── DRAG TAGS ──
-function startDrag(e,pid,idx){if(e.target.getAttribute('contenteditable')==='true')return;e.preventDefault();dragging={pid,idx};const tag=document.getElementById(`ltag-${idx}`),rect=tag.getBoundingClientRect();dragOffX=e.clientX-rect.left;dragOffY=e.clientY-rect.top;}
-function startTouchDrag(e,pid,idx){if(e.target.getAttribute('contenteditable')==='true')return;const t=e.touches[0];dragging={pid,idx};const tag=document.getElementById(`ltag-${idx}`),rect=tag.getBoundingClientRect();dragOffX=t.clientX-rect.left;dragOffY=t.clientY-rect.top;}
-function moveDraggingTag(cx,cy){
-  const zone=document.getElementById(`sceneZone${dragging.pid}_0`);if(!zone)return;
-  const zr=zone.getBoundingClientRect(),tag=document.getElementById(`ltag-${dragging.idx}`);
-  const leftPx=Math.max(0,Math.min(cx-zr.left-dragOffX, zr.width -tag.offsetWidth));
-  const topPx =Math.max(0,Math.min(cy-zr.top -dragOffY, zr.height-tag.offsetHeight));
-  const leftPct=parseFloat((leftPx/zr.width *100).toFixed(3));
-  const topPct =parseFloat((topPx /zr.height*100).toFixed(3));
-  tag.style.left=leftPct+'%'; tag.style.top=topPct+'%';
-  const p=getP(dragging.pid);if(!p.sceneTagPos)p.sceneTagPos={};
-  p.sceneTagPos[dragging.idx]={leftPct,topPct};
-}
-
-// 標籤超出邊界時自動夾回（支援百分比與舊的 px 格式）
-function clampTags(pid) {
-  const zone=document.getElementById(`sceneZone${pid}_0`);if(!zone)return;
-  const p=getP(pid);if(!p||!p.sceneTagPos)return;
-  const zw=zone.offsetWidth,zh=zone.offsetHeight;if(!zw||!zh)return;
-  let changed=false;
-  Object.keys(p.sceneTagPos).forEach(i=>{
-    const tag=document.getElementById(`ltag-${i}`);if(!tag)return;
-    const tw=tag.offsetWidth,th=tag.offsetHeight;
-    const pos=p.sceneTagPos[i];
-    // 舊格式（px）升級到百分比
-    if(typeof pos.leftPct!=='number'){
-      const lp=parseFloat(pos.left||'0')/zw*100;
-      const tp=parseFloat(pos.top||'0')/zh*100;
-      pos.leftPct=parseFloat(Math.min(lp,(zw-tw)/zw*100).toFixed(3));
-      pos.topPct =parseFloat(Math.min(tp,(zh-th)/zh*100).toFixed(3));
-      delete pos.left; delete pos.top;
-      tag.style.left=pos.leftPct+'%'; tag.style.top=pos.topPct+'%';
-      changed=true; return;
-    }
-    const maxLpct=(zw-tw)/zw*100;
-    const maxTpct=(zh-th)/zh*100;
-    const nl=Math.max(0,Math.min(pos.leftPct,maxLpct));
-    const nt=Math.max(0,Math.min(pos.topPct, maxTpct));
-    if(nl!==pos.leftPct||nt!==pos.topPct){
-      pos.leftPct=parseFloat(nl.toFixed(3)); pos.topPct=parseFloat(nt.toFixed(3));
-      tag.style.left=pos.leftPct+'%'; tag.style.top=pos.topPct+'%';
-      changed=true;
-    }
-  });
-  if(changed)debouncedSave(p);
-}
-document.addEventListener('mousemove',e=>{if(dragging)moveDraggingTag(e.clientX,e.clientY);});
-document.addEventListener('mouseup',()=>{if(dragging){saveProgram(getP(dragging.pid));dragging=null;}});
-document.addEventListener('touchmove',e=>{if(dragging){e.preventDefault();moveDraggingTag(e.touches[0].clientX,e.touches[0].clientY);}},{passive:false});
-document.addEventListener('touchend',()=>{if(dragging){saveProgram(getP(dragging.pid));dragging=null;}});
-
-// ── CATEGORY DROP ──
-// 拖移開始時記錄，防止 navDragEnd 清掉前 catDrop 來不及拿到
-
-// ── NAV DRAG ──
-function navClick(e,id){if(e.target.classList.contains('drag-handle'))return;activeId=id;activeTab='scene';render();}
-function navDragStart(e,id){
-  navDraggingId=id;
-  e.currentTarget.classList.add('dragging-item');
-  e.dataTransfer.effectAllowed='move';
-}
-function navDragOver(e){e.preventDefault();e.currentTarget.classList.add('drag-over');}
-function navDragLeave(e){e.currentTarget.classList.remove('drag-over');}
-function navDrop(e,tid){
-  e.preventDefault();e.currentTarget.classList.remove('drag-over');
-  if(navDraggingId===tid)return;
-  const fi=programs.findIndex(p=>p.id===navDraggingId),ti=programs.findIndex(p=>p.id===tid);
-  if(fi<0||ti<0)return;
-  const[moved]=programs.splice(fi,1);programs.splice(ti,0,moved);
-  renderNav();saveOrder();
-}
-function navDragEnd(){
-  navDraggingId=null;
-  document.querySelectorAll('.nav-item').forEach(el=>el.classList.remove('dragging-item','drag-over'));
-  document.querySelectorAll('.nav-category').forEach(el=>el.classList.remove('drop-active'));
-}
-
-// ── MOBILE ──
-function toggleMobileNav(){const l=document.getElementById('mobileNavList'),b=document.getElementById('mobileNavToggle');const o=l.classList.toggle('open');b.textContent=o?'✕':'☰';}
-function closeMobileNav(){document.getElementById('mobileNavList').classList.remove('open');document.getElementById('mobileNavToggle').textContent='☰';}
-function filterNav(){const q=document.getElementById('searchInput').value.toLowerCase();document.querySelectorAll('#navList .nav-item').forEach(el=>{el.style.display=el.dataset.name.includes(q)?'':''});}
-
-// expose to inline handlers — iOS Safari 不支援 Object.assign getter/setter
-// 改用直接函式包裝，確保讀寫的是 module 內部變數
-window.addProgram     = addProgram;
-window.deleteProgram  = deleteProgram;
-window.addLight       = ()=>{};
-window.removeLight    = ()=>{};
-window.addCam         = id => {
-  const p = getP(id);
-  if (!p.cameras) p.cameras = [];
-  const last = p.cameras[p.cameras.length - 1];
-  let newName = 'Full';
-  if (last && last.name) {
-    const match = last.name.match(/^(.+?)(\s*\d+)?$/);
-    const base = match ? match[1].trim() : last.name;
-    const count = p.cameras.filter(c => (c.name||'').startsWith(base)).length;
-    newName = `${base} ${count + 1}`;
-  }
-  p.cameras.push({name:newName, note:'', focal:'', aperture:'', shutter:'', iso:'', kelvin:'', img:null});
-  renderMain(); saveProgram(p);
+const FB = {
+  apiKey:"AIzaSyAA_lBeMcU_MHwBIakycWMY1qVFQpNFlLw",
+  authDomain:"dt-studio-5bb2b.firebaseapp.com",
+  projectId:"dt-studio-5bb2b",
+  storageBucket:"dt-studio-5bb2b.firebasestorage.app",
+  messagingSenderId:"453498810482",
+  appId:"1:453498810482:web:265ae1a1aac433355e52eb"
 };
-window.removeCam      = (id,idx)=>{const p=getP(id);p.cameras.splice(idx,1);renderMain();saveProgram(p);};
-window.togglePower    = togglePower;
-window.setFixture     = setFixture;
-window.setHoneycomb   = setHoneycomb;
-window.setLightColor  = ()=>{};  // 已不使用
-window.setLightRGB    = setLightRGB;
-window.fmtPct = fmtPct; window.fmtK = fmtK;
-window.fmtH = fmtH; window.fmtS = fmtS; window.fmtI = fmtI;
-window.handleImg      = handleImg;
-window.addSceneImgs    = addSceneImgs;
-window.removeSceneImg  = removeSceneImg;
-window.addOnairImgs    = addOnairImgs;
-window.addOnairSlide   = addOnairSlide;
-window.handleOnairImg  = handleOnairImg;
-window.dropOnairFile   = dropOnairFile;
-window.dropOnairNew    = dropOnairNew;
-window.removeOnairImg  = removeOnairImg;
-window.dropFiles       = dropFiles;
-window.dropCamFile     = dropCamFile;
-window.handleCamImg    = handleCamImg;
-window.updateTag      = updateTag;
-window.debouncedSave  = debouncedSave;
-window.saveProgram    = saveProgram;
-window.getP           = getP;
-window.startDrag      = startDrag;
-window.startTouchDrag = startTouchDrag;
-window.navClick       = navClick;
-window.navDragStart   = navDragStart;
-window.navDragOver    = navDragOver;
-window.navDragLeave   = navDragLeave;
-window.navDrop        = navDrop;
-window.navDragEnd     = navDragEnd;
-window.toggleMobileNav = toggleMobileNav;
-window.closeMobileNav  = closeMobileNav;
-window.filterNav      = filterNav;
-window.renderMain     = renderMain;
-window.renderNav      = renderNav;
-window.renderMobileNav = renderMobileNav;
-window.render         = render;
-// activeTab / activeId: 讓 inline handler 讀寫時透過函式操作 module 變數
-window.setActiveTab   = v => { activeTab = v; };
-window.setActiveId    = v => { activeId  = v; };
-window.getActiveTab   = ()  => activeTab;
-window.getActiveId    = ()  => activeId;
+const db = getFirestore(initializeApp(FB));
 
-// 視窗縮放時重新夾回標籤
-window.addEventListener('resize', () => {
-  if (activeId && activeTab === 'scene') requestAnimationFrame(() => clampTags(activeId));
-});
+// ── CONSTANTS ─────────────────────────────────────────────────
+const TYPES    = ['NG','重來','聲音狀況','簡報調整'];
+const FLASH_IC = ['⚠️','🔄','🎙','🖥'];
+const BADGE_C  = ['b0','b1','b2','b3'];
+const SS_BADGE = [
+  'background:rgba(184,122,18,.2);color:#d4a843;border:1px solid rgba(184,122,18,.3)',
+  'background:rgba(192,57,43,.2);color:#e06b6a;border:1px solid rgba(192,57,43,.3)',
+  'background:rgba(26,92,140,.2);color:#7ab0e0;border:1px solid rgba(26,92,140,.3)',
+  'background:rgba(74,85,104,.2);color:#888885;border:1px solid rgba(74,85,104,.3)',
+];
+
+// ── STATE ─────────────────────────────────────────────────────
+let elapsed=0, running=false, tint=null;
+let logs=[], selType=0, photoData=null;
+const now = new Date();
+const TODAY = now.toISOString().slice(0,10);
+
+// ── INIT ──────────────────────────────────────────────────────
+document.getElementById('date-chip').textContent =
+  now.toLocaleDateString('zh-TW',{month:'2-digit',day:'2-digit',weekday:'short'});
+
+function pad(n){return String(n).padStart(2,'0')}
+function s2tc(s){return pad(Math.floor(s/3600))+':'+pad(Math.floor(s%3600/60))+':'+pad(s%60)}
+function isIOS(){return /iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1)}
+function setDot(s){const d=document.getElementById('sync-dot');d.className='';if(s)d.classList.add(s)}
+
+// ── TIMER ─────────────────────────────────────────────────────
+function startTimer(){
+  if(running)return;
+  running=true;
+  document.getElementById('timer').classList.add('on');
+  document.getElementById('waveform').classList.add('on');
+  tint=setInterval(()=>{elapsed++;document.getElementById('timer').textContent=s2tc(elapsed)},1000);
+}
+function stopTimer(){
+  if(!running)return;
+  running=false; clearInterval(tint); elapsed=0;
+  document.getElementById('timer').textContent='00:00:00';
+  document.getElementById('timer').classList.remove('on');
+  document.getElementById('waveform').classList.remove('on');
+  const el=document.getElementById('f-roll');
+  const c=parseInt(el.value)||0; if(c>0) el.value=c+1;
+  document.getElementById('f-ppt').value='';
+}
+function grabTC(){document.getElementById('f-tc').value=s2tc(elapsed)}
+
+// ── TYPE ──────────────────────────────────────────────────────
+function pickType(i){
+  selType=i;
+  for(let j=0;j<4;j++){
+    const b=document.getElementById('ty'+j);
+    j===i ? b.classList.remove('unsel') : b.classList.add('unsel');
+  }
+}
+pickType(0);
+
+// ── PHOTO ─────────────────────────────────────────────────────
+function onPhoto(e){
+  const f=e.target.files[0]; if(!f)return;
+  const r=new FileReader();
+  r.onload=ev=>{
+    photoData=ev.target.result;
+    document.getElementById('photo-box').innerHTML='<img src="'+photoData+'" alt="PPT">';
+  };
+  r.readAsDataURL(f);
+}
+
+// ── FLASH ─────────────────────────────────────────────────────
+function fireFlash(t){
+  const ov=document.getElementById('flash-ov');
+  document.getElementById('flash-ic').textContent=FLASH_IC[t];
+  ov.classList.remove('fire'); void ov.offsetWidth; ov.classList.add('fire');
+  setTimeout(()=>ov.classList.remove('fire'),700);
+}
+
+// ── ADD NG (local) ────────────────────────────────────────────
+function addNG(){
+  const tc  =document.getElementById('f-tc').value.trim()||s2tc(elapsed);
+  const roll=document.getElementById('f-roll').value.trim();
+  const ppt =document.getElementById('f-ppt').value.trim();
+  const note=document.getElementById('f-note').value.trim();
+  logs.unshift({tc,roll,ppt,note,type:selType,photo:photoData,id:Date.now()});
+  document.getElementById('f-tc').value='';
+  document.getElementById('f-ppt').value='';
+  document.getElementById('f-note').value='';
+  photoData=null;
+  document.getElementById('photo-box').innerHTML='<div class="ph-ph"><span class="phi">📷</span><span>拍照 / 選圖</span></div>';
+  document.getElementById('photo-input').value='';
+  fireFlash(selType);
+  renderLogs();
+}
+
+function delLog(id){logs=logs.filter(l=>l.id!==id);renderLogs()}
+
+function clearCurrent(){
+  if(!logs.length)return;
+  if(confirm('確定清空目前 NG 紀錄？')){logs=[];renderLogs();}
+}
+
+function renderLogs(){
+  document.getElementById('log-cnt').textContent='記錄表 '+logs.length+' 筆';
+  const el=document.getElementById('log-list');
+  if(!logs.length){el.innerHTML='<div class="log-empty">— 尚無紀錄 —</div>';return;}
+  el.innerHTML=logs.map((l,i)=>`
+    <div class="li">
+      <span class="li-num">#${logs.length-i}</span>
+      <div class="li-main">
+        <div class="li-top">
+          ${l.roll?`<span class="li-cam">CAM${l.roll}</span>`:''}
+          <span class="li-tc">${l.tc}</span>
+          ${l.ppt?`<span class="li-ppt">p.${l.ppt}</span>`:''}
+          <span class="badge ${BADGE_C[l.type]}">${TYPES[l.type]}</span>
+        </div>
+        ${l.photo?`<img class="li-thumb" src="${l.photo}" onclick="openLightbox('${l.photo}')" alt="PPT">`:''}
+        <input class="note-inline" data-id="${l.id}"
+          value="${(l.note||'').replace(/"/g,'&quot;')}"
+          placeholder="＋ 備註"
+          onchange="updateNote(${l.id},this.value)">
+      </div>
+      <button class="del-btn" onclick="delLog(${l.id})">✕</button>
+    </div>`).join('');
+}
+
+function updateNote(id, val){
+  const l = logs.find(l=>l.id===id);
+  if(l) l.note = val.trim();
+}
+
+// ── SAVE SESSION → FIRESTORE ──────────────────────────────────
+async function saveSession(){
+  if(!logs.length){alert('尚無 NG 紀錄可儲存');return;}
+  const proj=document.getElementById('proj').value.trim()||'未命名專案';
+  const spk =document.getElementById('spk').value.trim();
+  const sid =TODAY.replace(/-/g,'')+'_'+Date.now();
+  const savedTime=new Date().toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit',hour12:true});
+  setDot('');
+  try{
+    await setDoc(doc(db,'ng-archive',sid),{sid,proj,spk,date:TODAY,savedAt:Date.now(),count:logs.length,savedTime});
+    const batch=writeBatch(db);
+    logs.forEach(l=>batch.set(
+      doc(db,'ng-archive',sid,'logs',String(l.id)),
+      {tc:l.tc,roll:l.roll||'',ppt:l.ppt||'',note:l.note||'',type:l.type,id:l.id}
+    ));
+    await batch.commit();
+    setDot('ok');
+    alert('✓ 已儲存「'+proj+'」— '+logs.length+' 筆 NG');
+    logs=[]; renderLogs();
+    document.getElementById('proj').value='';
+    document.getElementById('spk').value='';
+  }catch(e){setDot('err');alert('儲存失敗：'+e.message);}
+}
+
+// ── ARCHIVE MODAL ─────────────────────────────────────────────
+async function openArchive(){
+  document.getElementById('arch-modal').classList.add('on');
+  const list=document.getElementById('arch-list');
+  list.innerHTML='<div class="log-empty">載入中…</div>';
+  const cutoff=new Date(now);
+  cutoff.setDate(cutoff.getDate()-3);
+  const co=cutoff.toISOString().slice(0,10);
+  try{
+    const snap=await getDocs(collection(db,'ng-archive'));
+    const sessions=snap.docs.map(d=>d.data())
+      .filter(s=>s.date&&s.date>=co)
+      .sort((a,b)=>b.savedAt-a.savedAt);
+    if(!sessions.length){
+      list.innerHTML='<div class="log-empty">最近三天尚無儲存場次</div>';return;
+    }
+    list.innerHTML=sessions.map(s=>`
+      <div class="si" onclick="toggleDetail('${s.sid}',this)">
+        <div class="si-title">${s.proj||'未命名'}${s.spk?' — '+s.spk:''}</div>
+        <div class="si-meta">${s.date}${s.savedTime?' '+s.savedTime:''}　${s.count||0} 筆 NG　▶ 點開查看</div>
+      </div>
+      <div class="sd" id="sd-${s.sid}"></div>
+    `).join('');
+  }catch(e){
+    list.innerHTML='<div class="log-empty" style="color:#e06b6a">載入失敗：'+e.message+'</div>';
+  }
+}
+
+function closeArchive(){document.getElementById('arch-modal').classList.remove('on')}
+
+async function toggleDetail(sid,itemEl){
+  const detail=document.getElementById('sd-'+sid);
+  if(detail.classList.contains('on')){detail.classList.remove('on');detail.innerHTML='';return;}
+  detail.innerHTML='<div class="log-empty">載入中…</div>';
+  detail.classList.add('on');
+  try{
+    const snap=await getDocs(query(collection(db,'ng-archive',sid,'logs'),orderBy('id','asc')));
+    const rows=snap.docs.map(d=>d.data());
+    if(!rows.length){detail.innerHTML='<div class="log-empty">無紀錄</div>';return;}
+
+    const groups={},gOrder=[];
+    rows.forEach(l=>{
+      const k=l.roll?'CAM'+l.roll:'—';
+      if(!groups[k]){groups[k]=[];gOrder.push(k);}
+      groups[k].push(l);
+    });
+
+    // get proj name for this session
+    const allSnap=await getDocs(collection(db,'ng-archive'));
+    const meta=allSnap.docs.map(d=>d.data()).find(d=>d.sid===sid);
+    const projName=meta?.proj||'場記';
+
+    let tbl=`<table class="ss-tbl"><thead><tr>
+      <th style="width:22px">#</th>
+      <th style="width:80px">Timecode</th>
+      <th style="width:40px">PPT</th>
+      <th>NG 類型</th>
+      <th>備註</th></tr></thead><tbody>`;
+    let n=1;
+    gOrder.forEach(cam=>{
+      tbl+=`<tr><td colspan="5" class="cam-hdr">▶ ${cam}</td></tr>`;
+      groups[cam].forEach(l=>{
+        tbl+=`<tr>
+          <td style="color:#555;font-family:monospace">${n++}</td>
+          <td style="font-family:monospace;font-weight:500">${l.tc}</td>
+          <td style="font-family:monospace">${l.ppt?'p.'+l.ppt:'—'}</td>
+          <td><span class="ss-badge" style="${SS_BADGE[l.type]}">${TYPES[l.type]}</span></td>
+          <td style="color:#888;font-size:11px">${l.note||'—'}</td>
+        </tr>`;
+      });
+    });
+    tbl+='</tbody></table>';
+
+    const encProj=encodeURIComponent(projName);
+    detail.innerHTML=tbl+`
+      <div class="exp-row">
+        <button class="exp-btn exp-srt" onclick="dlSRT('${sid}','${encProj}')">↓ SRT (Premiere)</button>
+        <button class="exp-btn exp-csv" onclick="dlCSV('${sid}','${encProj}')">↓ CSV</button>
+      </div>`;
+  }catch(e){
+    detail.innerHTML='<div class="log-empty" style="color:#e06b6a">'+e.message+'</div>';
+  }
+}
+
+// ── EXPORT ────────────────────────────────────────────────────
+function triggerDL(content,filename,mime){
+  if(isIOS()){
+    const file=new File([content],filename,{type:mime});
+    if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
+      navigator.share({files:[file],title:filename}).catch(()=>showViewer(content,filename));
+    }else{showViewer(content,filename);}
+  }else{
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(new Blob([content],{type:mime}));
+    a.download=filename; document.body.appendChild(a); a.click();
+    setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000);
+  }
+}
+
+function showViewer(content,filename){
+  document.getElementById('ev-fn').textContent=filename;
+  document.getElementById('ev-ta').value=content;
+  document.getElementById('ev-wrap').classList.add('on');
+  document.getElementById('ev-copy-btn').onclick=()=>{
+    const ta=document.getElementById('ev-ta');
+    ta.select();ta.setSelectionRange(0,99999);
+    navigator.clipboard?.writeText(ta.value).then(()=>{
+      document.getElementById('ev-copy-btn').textContent='✓ 已複製！';
+      setTimeout(()=>document.getElementById('ev-copy-btn').textContent='複製全部內容',2000);
+    });
+  };
+}
+
+async function dlSRT(sid,projEnc){
+  const proj=decodeURIComponent(projEnc);
+  const snap=await getDocs(query(collection(db,'ng-archive',sid,'logs'),orderBy('id','asc')));
+  const rows=snap.docs.map(d=>d.data());
+  function toSRT(tc){const p=tc.split(':');while(p.length<3)p.unshift('00');return p.map(x=>String(x).padStart(2,'0')).join(':')+',000'}
+  function addSec(tc,s){const p=tc.split(':').map(Number);let t=(p[0]||0)*3600+(p[1]||0)*60+(p[2]||0)+s;return pad(Math.floor(t/3600))+':'+pad(Math.floor(t%3600/60))+':'+pad(t%60)+',000'}
+  const groups={},gOrder=[];
+  rows.forEach(l=>{const k=l.roll||'x';if(!groups[k]){groups[k]=[];gOrder.push(k);}groups[k].push(l);});
+  if(isIOS()){
+    let srt='';let idx=1;
+    gOrder.forEach(k=>groups[k].forEach(l=>{
+      const cam=l.roll?'CAM'+l.roll:'';
+      const ppt=l.ppt?' p.'+l.ppt:'';const note=l.note?' — '+l.note:'';
+      srt+=`${idx}\n${toSRT(l.tc)} --> ${addSec(l.tc,3)}\n[${TYPES[l.type]}] ${cam}${ppt}${note}\n\n`;idx++;
+    }));
+    triggerDL(srt,proj+'_NG.srt','text/plain');
+  }else{
+    gOrder.forEach((k,gi)=>{
+      let srt='';
+      groups[k].forEach((l,i)=>{
+        const ppt=l.ppt?' p.'+l.ppt:'';const note=l.note?' — '+l.note:'';
+        srt+=`${i+1}\n${toSRT(l.tc)} --> ${addSec(l.tc,3)}\n[${TYPES[l.type]}]${ppt}${note}\n\n`;
+      });
+      const cl=k!=='x'?'_CAM'+k:'';
+      setTimeout(()=>triggerDL(srt,proj+cl+'.srt','text/plain'),gi*700);
+    });
+  }
+}
+
+async function dlCSV(sid,projEnc){
+  const proj=decodeURIComponent(projEnc);
+  const snap=await getDocs(query(collection(db,'ng-archive',sid,'logs'),orderBy('id','asc')));
+  const rows=snap.docs.map(d=>d.data());
+  const groups={},gOrder=[];
+  rows.forEach(l=>{const k=l.roll?'CAM'+l.roll:'未分組';if(!groups[k]){groups[k]=[];gOrder.push(k);}groups[k].push(l);});
+  let csv='\uFEFF'+'專案,'+proj+'\n日期,'+TODAY+'\n\n';
+  gOrder.forEach(cam=>{
+    csv+=cam+'\n#,Timecode,PPT頁數,NG類型,備註\n';
+    groups[cam].forEach((l,i)=>{csv+=`${i+1},${l.tc},${l.ppt?'p.'+l.ppt:'—'},${TYPES[l.type]},"${l.note||''}"\n`;});
+    csv+='\n';
+  });
+  triggerDL(csv,proj+'_場記.csv','text/csv;charset=utf-8');
+}
+
+// ── LIGHTBOX ──────────────────────────────────────────────────
+function openLightbox(src){document.getElementById('lb-img').src=src;document.getElementById('lightbox').classList.add('on')}
+function closeLightbox(){document.getElementById('lightbox').classList.remove('on');document.getElementById('lb-img').src=''}
+
+// ── EXPOSE ────────────────────────────────────────────────────
+window.startTimer=startTimer;window.stopTimer=stopTimer;window.grabTC=grabTC;
+window.pickType=pickType;window.onPhoto=onPhoto;window.addNG=addNG;
+window.delLog=delLog;window.clearCurrent=clearCurrent;window.saveSession=saveSession;
+window.openArchive=openArchive;window.closeArchive=closeArchive;
+window.toggleDetail=toggleDetail;window.dlSRT=dlSRT;window.dlCSV=dlCSV;
+window.openLightbox=openLightbox;window.closeLightbox=closeLightbox;
+window.updateNote=updateNote;
+
+renderLogs();
 </script>
 </body>
 </html>
