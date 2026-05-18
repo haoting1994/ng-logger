@@ -304,6 +304,10 @@ html,body{min-height:100%;background:#222426!important;color:#e8e8e6!important;f
         <label>檔號 CAM</label>
         <input id="f-roll" type="number" min="1" placeholder="CAM #" style="text-align:center">
       </div>
+      <div class="field" style="width:60px;flex-shrink:0">
+        <label style="color:#3a9d54">OK</label>
+        <button id="ok-btn" onclick="toggleOK()" style="width:100%;height:42px;background:#363739;border:1px solid rgba(255,255,255,.15);border-radius:6px;color:#888885;font-size:13px;font-weight:700;font-family:var(--mono);cursor:pointer;-webkit-appearance:none;letter-spacing:.04em">OK</button>
+      </div>
       <div class="tc-field" style="flex:1;min-width:0">
         <div class="tc-label">Timecode</div>
         <div class="tc-wrap">
@@ -332,7 +336,7 @@ html,body{min-height:100%;background:#222426!important;color:#e8e8e6!important;f
   <!-- LOG LIST -->
   <div class="card">
     <div class="log-hdr">
-      <span class="log-cnt" id="log-cnt">記錄表 0 筆</span>
+      <span class="log-cnt" id="log-cnt">現場紀錄 0 筆</span>
       <button class="lbtn save" onclick="saveSession()">💾 儲存場次</button>
       <button class="lbtn" onclick="clearCurrent()">清空</button>
     </div>
@@ -401,6 +405,22 @@ function stopTimer(){
 }
 function grabTC(){document.getElementById('f-tc').value=s2tc(elapsed)}
 
+// ── OK TOGGLE ─────────────────────────────────────────────────
+let isOK = false;
+function toggleOK(){
+  isOK = !isOK;
+  const btn = document.getElementById('ok-btn');
+  if(isOK){
+    btn.style.background = '#3a7d44';
+    btn.style.color = '#fff';
+    btn.style.borderColor = '#3a7d44';
+  } else {
+    btn.style.background = '#363739';
+    btn.style.color = '#888885';
+    btn.style.borderColor = 'rgba(255,255,255,.15)';
+  }
+}
+
 // ── TYPE ──────────────────────────────────────────────────────
 function pickType(i){
   selType=i;
@@ -436,7 +456,22 @@ function addNG(){
   const roll=document.getElementById('f-roll').value.trim();
   const ppt =document.getElementById('f-ppt').value.trim();
   const note=document.getElementById('f-note').value.trim();
-  logs.unshift({tc,roll,ppt,note,type:selType,photo:photoData,id:Date.now()});
+  const ok  =isOK;
+  logs.unshift({tc,roll,ppt,note,type:selType,photo:photoData,id:Date.now(),ok});
+  document.getElementById('f-tc').value='';
+  document.getElementById('f-ppt').value='';
+  document.getElementById('f-note').value='';
+  photoData=null;
+  document.getElementById('photo-box').innerHTML='<div class="ph-ph"><span class="phi">📷</span><span>拍照 / 選圖</span></div>';
+  document.getElementById('photo-input').value='';
+  // reset OK
+  isOK=false; toggleOK(); toggleOK(); // reset visual (double toggle = off)
+  isOK=false;
+  const btn=document.getElementById('ok-btn');
+  btn.style.background='#363739';btn.style.color='#888885';btn.style.borderColor='rgba(255,255,255,.15)';
+  fireFlash(selType);
+  renderLogs();
+}
   document.getElementById('f-tc').value='';
   document.getElementById('f-ppt').value='';
   document.getElementById('f-note').value='';
@@ -455,7 +490,7 @@ function clearCurrent(){
 }
 
 function renderLogs(){
-  document.getElementById('log-cnt').textContent='記錄表 '+logs.length+' 筆';
+  document.getElementById('log-cnt').textContent='現場紀錄 '+logs.length+' 筆';
   const el=document.getElementById('log-list');
   if(!logs.length){el.innerHTML='<div class="log-empty">— 尚無紀錄 —</div>';return;}
   el.innerHTML=logs.map((l,i)=>`
@@ -467,6 +502,7 @@ function renderLogs(){
           <span class="li-tc">${l.tc}</span>
           ${l.ppt?`<span class="li-ppt">p.${l.ppt}</span>`:''}
           <span class="badge ${BADGE_C[l.type]}">${TYPES[l.type]}</span>
+          ${l.ok?`<span class="badge" style="background:rgba(58,125,68,.25);color:#5ecf80;border:1px solid rgba(58,125,68,.4)">✓ OK</span>`:''}
         </div>
         ${l.photo?`<img class="li-thumb" src="${l.photo}" onclick="openLightbox('${l.photo}')" alt="PPT">`:''}
         <input class="note-inline" data-id="${l.id}"
@@ -485,7 +521,7 @@ function updateNote(id, val){
 
 // ── SAVE SESSION → FIRESTORE ──────────────────────────────────
 async function saveSession(){
-  if(!logs.length){alert('尚無 NG 紀錄可儲存');return;}
+  if(!logs.length){alert('尚無現場紀錄可儲存');return;}
   const proj=document.getElementById('proj').value.trim()||'未命名專案';
   const spk =document.getElementById('spk').value.trim();
   const sid =TODAY.replace(/-/g,'')+'_'+Date.now();
@@ -496,14 +532,12 @@ async function saveSession(){
     const batch=writeBatch(db);
     logs.forEach(l=>batch.set(
       doc(db,'ng-archive',sid,'logs',String(l.id)),
-      {tc:l.tc,roll:l.roll||'',ppt:l.ppt||'',note:l.note||'',type:l.type,id:l.id}
+      {tc:l.tc,roll:l.roll||'',ppt:l.ppt||'',note:l.note||'',type:l.type,id:l.id,ok:l.ok||false}
     ));
     await batch.commit();
     setDot('ok');
-    alert('✓ 已儲存「'+proj+'」— '+logs.length+' 筆 NG');
+    alert('✓ 已儲存「'+proj+'」— '+logs.length+' 筆現場紀錄');
     logs=[]; renderLogs();
-    document.getElementById('proj').value='';
-    document.getElementById('spk').value='';
   }catch(e){setDot('err');alert('儲存失敗：'+e.message);}
 }
 
@@ -526,7 +560,7 @@ async function openArchive(){
     list.innerHTML=sessions.map(s=>`
       <div class="si" onclick="toggleDetail('${s.sid}',this)">
         <div class="si-title">${s.proj||'未命名'}${s.spk?' — '+s.spk:''}</div>
-        <div class="si-meta">${s.date}${s.savedTime?' '+s.savedTime:''}　${s.count||0} 筆 NG　▶ 點開查看</div>
+        <div class="si-meta">${s.date}${s.savedTime?' '+s.savedTime:''}　${s.count||0} 筆現場紀錄　▶ 點開查看</div>
       </div>
       <div class="sd" id="sd-${s.sid}"></div>
     `).join('');
@@ -573,7 +607,7 @@ async function toggleDetail(sid,itemEl){
           <td style="color:#555;font-family:monospace">${n++}</td>
           <td style="font-family:monospace;font-weight:500">${l.tc}</td>
           <td style="font-family:monospace">${l.ppt?'p.'+l.ppt:'—'}</td>
-          <td><span class="ss-badge" style="${SS_BADGE[l.type]}">${TYPES[l.type]}</span></td>
+          <td><span class="ss-badge" style="${SS_BADGE[l.type]}">${TYPES[l.type]}</span>${l.ok?' <span style="font-size:11px;color:#5ecf80;font-weight:500">✓ OK</span>':''}</td>
           <td style="color:#888;font-size:11px">${l.note||'—'}</td>
         </tr>`;
       });
@@ -635,7 +669,8 @@ async function dlSRT(sid,projEnc){
       const ppt=l.ppt?' p.'+l.ppt:'';const note=l.note?' — '+l.note:'';
       srt+=`${idx}\n${toSRT(l.tc)} --> ${addSec(l.tc,3)}\n[${TYPES[l.type]}] ${cam}${ppt}${note}\n\n`;idx++;
     }));
-    triggerDL(srt,proj+'_NG.srt','text/plain');
+    const metaSnap2=await getDocs(collection(db,'ng-archive'));const meta2=metaSnap2.docs.map(d=>d.data()).find(d=>d.sid===sid);const spk2=meta2?.spk||'';const date2=meta2?.date||TODAY;const fn2=date2+'_'+proj+(spk2?'_'+spk2:'')+'_ALL.srt';
+    triggerDL(srt,fn2,'text/plain');
   }else{
     gOrder.forEach((k,gi)=>{
       let srt='';
@@ -644,7 +679,7 @@ async function dlSRT(sid,projEnc){
         srt+=`${i+1}\n${toSRT(l.tc)} --> ${addSec(l.tc,3)}\n[${TYPES[l.type]}]${ppt}${note}\n\n`;
       });
       const cl=k!=='x'?'_CAM'+k:'';
-      setTimeout(()=>triggerDL(srt,proj+cl+'.srt','text/plain'),gi*700);
+      setTimeout(async()=>{const ms=await getDocs(collection(db,'ng-archive'));const mt=ms.docs.map(d=>d.data()).find(d=>d.sid===sid);const sp=mt?.spk||'';const dt=mt?.date||TODAY;triggerDL(srt,dt+'_'+proj+(sp?'_'+sp:'')+cl+'.srt','text/plain');},gi*700);
     });
   }
 }
@@ -661,7 +696,8 @@ async function dlCSV(sid,projEnc){
     groups[cam].forEach((l,i)=>{csv+=`${i+1},${l.tc},${l.ppt?'p.'+l.ppt:'—'},${TYPES[l.type]},"${l.note||''}"\n`;});
     csv+='\n';
   });
-  triggerDL(csv,proj+'_場記.csv','text/csv;charset=utf-8');
+  const metaSnC=await getDocs(collection(db,'ng-archive'));const metaC=metaSnC.docs.map(d=>d.data()).find(d=>d.sid===sid);const spkC=metaC?.spk||'';const dateC=metaC?.date||TODAY;
+  triggerDL(csv,dateC+'_'+proj+(spkC?'_'+spkC:'')+'_場記.csv','text/csv;charset=utf-8');
 }
 
 // ── LIGHTBOX ──────────────────────────────────────────────────
@@ -675,7 +711,7 @@ window.delLog=delLog;window.clearCurrent=clearCurrent;window.saveSession=saveSes
 window.openArchive=openArchive;window.closeArchive=closeArchive;
 window.toggleDetail=toggleDetail;window.dlSRT=dlSRT;window.dlCSV=dlCSV;
 window.openLightbox=openLightbox;window.closeLightbox=closeLightbox;
-window.updateNote=updateNote;
+window.updateNote=updateNote;window.toggleOK=toggleOK;
 
 renderLogs();
 </script>
