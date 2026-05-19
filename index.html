@@ -539,27 +539,23 @@ async function saveSession(){
 // ── ARCHIVE MODAL ─────────────────────────────────────────────
 async function openArchive(){
   document.getElementById('arch-modal').classList.add('on');
-  // set date picker to today
-  const picker = document.getElementById('arch-date');
-  picker.value = TODAY;
-  await loadArchiveForDate(TODAY);
-}
-
-async function loadArchiveForDate(dateStr){
   const list=document.getElementById('arch-list');
   list.innerHTML='<div class="log-empty">載入中…</div>';
+  const cutoff=new Date(now);
+  cutoff.setDate(cutoff.getDate()-30);
+  const co=cutoff.toISOString().slice(0,10);
   try{
     const snap=await getDocs(collection(db,'ng-archive'));
     const sessions=snap.docs.map(d=>d.data())
-      .filter(s=>s.date===dateStr)
+      .filter(s=>s.date&&s.date>=co)
       .sort((a,b)=>b.savedAt-a.savedAt);
     if(!sessions.length){
-      list.innerHTML='<div class="log-empty">'+dateStr+' 無儲存場次</div>';return;
+      list.innerHTML='<div class="log-empty">尚無儲存場次</div>';return;
     }
     list.innerHTML=sessions.map(s=>`
       <div class="si" onclick="toggleDetail('${s.sid}',this)">
         <div class="si-title">${s.proj||'未命名'}${s.spk?' — '+s.spk:''}</div>
-        <div class="si-meta">${s.savedTime||''}　${s.count||0} 筆現場紀錄　▶ 點開查看</div>
+        <div class="si-meta">${s.date}${s.savedTime?' '+s.savedTime:''}　${s.count||0} 筆現場紀錄　▶ 點開查看</div>
       </div>
       <div class="sd" id="sd-${s.sid}"></div>
     `).join('');
@@ -711,7 +707,6 @@ window.openArchive=openArchive;window.closeArchive=closeArchive;
 window.toggleDetail=toggleDetail;window.dlSRT=dlSRT;window.dlCSV=dlCSV;
 window.openLightbox=openLightbox;window.closeLightbox=closeLightbox;
 window.updateNote=updateNote;window.toggleOK=toggleOK;
-window.loadArchiveForDate=loadArchiveForDate;
 
 renderLogs();
 </script>
