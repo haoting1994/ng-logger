@@ -53,9 +53,11 @@ html,body{min-height:100%;background:#222426!important;color:#e8e8e6!important;f
   0%,100%{transform:scaleY(1);opacity:.7}
   50%{transform:scaleY(.3);opacity:1}
 }
-.roll-btn{background:#5db870!important;border:none;border-radius:6px;color:#fff!important;font-family:var(--mono);font-size:13px;font-weight:500;padding:9px 14px;cursor:pointer;-webkit-appearance:none;transition:background .15s}
+.roll-btn{background:rgba(93,184,112,.35)!important;border:1px solid rgba(93,184,112,.6)!important;border:none;border-radius:6px;color:#fff!important;font-family:var(--mono);font-size:13px;font-weight:500;padding:9px 14px;cursor:pointer;-webkit-appearance:none;transition:background .15s}
+.roll-btn.on{background:#5db870!important;border-color:#5db870!important}
 .roll-btn:active{background:#3a7d44!important}
-.stop-btn{background:#e05c5a!important;border:none;border-radius:6px;color:#fff!important;font-family:var(--mono);font-size:13px;font-weight:500;padding:9px 14px;cursor:pointer;-webkit-appearance:none;transition:background .15s}
+.stop-btn{background:rgba(224,92,90,.35)!important;border:1px solid rgba(224,92,90,.6)!important;border:none;border-radius:6px;color:#fff!important;font-family:var(--mono);font-size:13px;font-weight:500;padding:9px 14px;cursor:pointer;-webkit-appearance:none;transition:background .15s}
+.stop-btn.on{background:#e05c5a!important;border-color:#e05c5a!important}
 .stop-btn:active{background:#c0392b!important}
 
 /* INPUTS */
@@ -83,7 +85,7 @@ html,body{min-height:100%;background:#222426!important;color:#e8e8e6!important;f
 .tbtn.t2{border-color:#185fa5!important;color:#7ab0e0!important;background:rgba(26,92,140,.2)!important}
 .tbtn.t3{border-color:#5f5e5a!important;color:#9a9993!important;background:rgba(74,85,104,.2)!important}
 .tbtn.t4{border-color:#8b4513!important;color:#cd853f!important;background:rgba(139,69,19,.2)!important}
-.tbtn.unsel{opacity:.30!important;border-color:rgba(255,255,255,.08)!important;background:#2c2e31!important;color:#555552!important}
+.tbtn.unsel{opacity:.55!important;border-color:rgba(255,255,255,.08)!important;background:#2c2e31!important;color:#555552!important}
 
 /* PHOTO */
 .photo-box{border:1px dashed rgba(255,255,255,.18);border-radius:6px;background:#363739!important;display:flex;align-items:center;justify-content:center;cursor:pointer;overflow:hidden;min-height:56px}
@@ -269,9 +271,9 @@ html,body{min-height:100%;background:#222426!important;color:#e8e8e6!important;f
 <!-- HEADER -->
 <div id="hdr">
   <div id="hdr-in">
-    <span style="font-family:var(--mono);font-size:13px;font-weight:600;color:#3dbcd4;letter-spacing:.05em">TOFU LAB</span>
-    <span style="color:rgba(255,255,255,.2);margin:0 5px">|</span>
-    <span style="font-size:13px;font-weight:400;color:#e8e8e6">行動場記表</span>
+    <span style="font-family:var(--mono);font-size:17px;font-weight:700;color:#3dbcd4;letter-spacing:.05em">TOFU LAB</span>
+    <span style="color:rgba(255,255,255,.2);margin:0 6px;font-size:17px">|</span>
+    <span style="font-size:17px;font-weight:400;color:#e8e8e6">行動場記表</span>
     <div class="spacer"></div>
     <div id="sync-dot" title="Firebase 同步狀態"></div>
     <button class="hdr-btn" onclick="openArchive()">場次清單</button>
@@ -309,10 +311,6 @@ html,body{min-height:100%;background:#222426!important;color:#e8e8e6!important;f
         <label>檔號 CAM</label>
         <input id="f-roll" type="number" min="1" placeholder="CAM #" style="text-align:center">
       </div>
-      <div class="field" style="width:60px;flex-shrink:0">
-        <label style="color:#3a9d54">OK</label>
-        <button id="ok-btn" onclick="toggleOK()" style="width:100%;height:42px;background:#363739;border:1px solid rgba(255,255,255,.15);border-radius:6px;color:#888885;font-size:13px;font-weight:700;font-family:var(--mono);cursor:pointer;-webkit-appearance:none;letter-spacing:.04em">OK</button>
-      </div>
       <div class="tc-field" style="flex:1;min-width:0">
         <div class="tc-label">Timecode</div>
         <div class="tc-wrap">
@@ -342,6 +340,7 @@ html,body{min-height:100%;background:#222426!important;color:#e8e8e6!important;f
   <div class="card">
     <div class="log-hdr">
       <span class="log-cnt" id="log-cnt">現場紀錄 0 筆</span>
+      <button class="lbtn" id="ok-btn" onclick="quickOK()" style="color:#3dbcd4!important;border-color:rgba(61,188,212,.35)!important;font-weight:600;letter-spacing:.04em">✓ OK</button>
       <button class="lbtn save" onclick="saveSession()">💾 儲存場次</button>
       <button class="lbtn" onclick="clearCurrent()">清空</button>
     </div>
@@ -397,6 +396,8 @@ function startTimer(){
   running=true;
   document.getElementById('timer').classList.add('on');
   document.getElementById('waveform').classList.add('on');
+  document.querySelector('.roll-btn').classList.add('on');
+  document.querySelector('.stop-btn').classList.remove('on');
   tint=setInterval(()=>{elapsed++;document.getElementById('timer').textContent=s2tc(elapsed)},1000);
 }
 function stopTimer(){
@@ -405,26 +406,31 @@ function stopTimer(){
   document.getElementById('timer').textContent='00:00:00';
   document.getElementById('timer').classList.remove('on');
   document.getElementById('waveform').classList.remove('on');
+  document.querySelector('.roll-btn').classList.remove('on');
+  document.querySelector('.stop-btn').classList.add('on');
+  setTimeout(()=>document.querySelector('.stop-btn').classList.remove('on'),600);
   const el=document.getElementById('f-roll');
   const c=parseInt(el.value)||0; if(c>0) el.value=c+1;
   document.getElementById('f-ppt').value='';
 }
 function grabTC(){document.getElementById('f-tc').value=s2tc(elapsed)}
 
-// ── OK TOGGLE ─────────────────────────────────────────────────
-let isOK = false;
-function toggleOK(){
-  isOK = !isOK;
-  const btn = document.getElementById('ok-btn');
-  if(isOK){
-    btn.style.background = '#3a7d44';
-    btn.style.color = '#fff';
-    btn.style.borderColor = '#3a7d44';
-  } else {
-    btn.style.background = '#363739';
-    btn.style.color = '#888885';
-    btn.style.borderColor = 'rgba(255,255,255,.15)';
-  }
+// ── QUICK OK — save session directly as one-take OK ───────────
+async function quickOK(){
+  const proj=document.getElementById('proj').value.trim()||'未命名專案';
+  const spk=document.getElementById('spk').value.trim();
+  if(!confirm('「'+proj+'」一次 OK？\n將直接儲存場次並清空紀錄。')) return;
+  const sid=TODAY.replace(/-/g,'')+'_'+Date.now();
+  const savedTime=new Date().toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit',hour12:true});
+  setDot('');
+  try{
+    await setDoc(doc(db,'ng-archive',sid),{
+      sid,proj,spk,date:TODAY,savedAt:Date.now(),count:0,savedTime,oneOK:true
+    });
+    setDot('ok');
+    alert('✓ 一次 OK！「'+proj+'」已儲存');
+    logs=[]; renderLogs();
+  }catch(e){setDot('err');alert('儲存失敗：'+e.message);}
 }
 
 // ── TYPE ──────────────────────────────────────────────────────
@@ -462,7 +468,7 @@ function addNG(){
   const roll=document.getElementById('f-roll').value.trim();
   const ppt =document.getElementById('f-ppt').value.trim();
   const note=document.getElementById('f-note').value.trim();
-  const ok  =isOK;
+  const ok  =false;
   logs.unshift({tc,roll,ppt,note,type:selType,photo:photoData,id:Date.now(),ok});
   document.getElementById('f-tc').value='';
   document.getElementById('f-ppt').value='';
@@ -470,9 +476,6 @@ function addNG(){
   photoData=null;
   document.getElementById('photo-box').innerHTML='<div class="ph-ph"><span class="phi">📷</span><span>拍照 / 選圖</span></div>';
   document.getElementById('photo-input').value='';
-  isOK=false;
-  const okBtn=document.getElementById('ok-btn');
-  okBtn.style.background='#363739';okBtn.style.color='#888885';okBtn.style.borderColor='rgba(255,255,255,.15)';
   fireFlash(selType);
   renderLogs();
 }
@@ -703,10 +706,11 @@ function closeLightbox(){document.getElementById('lightbox').classList.remove('o
 window.startTimer=startTimer;window.stopTimer=stopTimer;window.grabTC=grabTC;
 window.pickType=pickType;window.onPhoto=onPhoto;window.addNG=addNG;
 window.delLog=delLog;window.clearCurrent=clearCurrent;window.saveSession=saveSession;
+window.quickOK=quickOK;
 window.openArchive=openArchive;window.closeArchive=closeArchive;
 window.toggleDetail=toggleDetail;window.dlSRT=dlSRT;window.dlCSV=dlCSV;
 window.openLightbox=openLightbox;window.closeLightbox=closeLightbox;
-window.updateNote=updateNote;window.toggleOK=toggleOK;
+window.updateNote=updateNote;
 
 renderLogs();
 </script>
