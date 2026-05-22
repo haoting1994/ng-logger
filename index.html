@@ -443,6 +443,14 @@ function stopTimer(){
 }
 function grabTC(){document.getElementById('f-tc').value=s2tc(elapsed)}
 
+function showToast(msg, color='#3a7d44'){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.style.background=color;
+  t.classList.add('show');
+  clearTimeout(t._tid);
+  t._tid=setTimeout(()=>t.classList.remove('show'),2800);
+}
+
 // ── QUICK OK — save session directly as one-take OK ───────────
 async function quickOK(){
   const proj=document.getElementById('proj').value.trim()||'未命名專案';
@@ -453,12 +461,12 @@ async function quickOK(){
   setDot('');
   try{
     await setDoc(doc(db,'ng-archive',sid),{
-      sid,proj,spk,date:TODAY,savedAt:Date.now(),count:0,savedTime,oneOK:true
+      sid,proj,spk,date:TODAY,savedAt:Date.now(),count:0,savedTime,oneOK:true,mode:currentMode
     });
     setDot('ok');
-    alert('✓ 一次 OK！「'+proj+'」已儲存');
+    showToast('✓ 一次 OK！「'+proj+'」已儲存');
     logs=[]; renderLogs();
-  }catch(e){setDot('err');alert('儲存失敗：'+e.message);}
+  }catch(e){setDot('err');showToast('⚠ 儲存失敗：'+e.message,'#c0392b');}
 }
 
 // ── MODE ──────────────────────────────────────────────────────
@@ -467,38 +475,26 @@ const MODES = {
   interview: { types:['口誤','重來','噪音','現場問題','其他'],    icons:['🗣','🔄','🎙','🚨','⚠️'], slidePage:false }
 };
 let currentMode = 'webinar';
+const TYPES    = [...MODES.webinar.types];
+const FLASH_IC = [...MODES.webinar.icons];
 
 function setMode(mode){
   currentMode = mode;
   const m = MODES[mode];
-
-  // update TYPES and FLASH_IC in memory
   TYPES.splice(0, TYPES.length, ...m.types);
   FLASH_IC.splice(0, FLASH_IC.length, ...m.icons);
-
-  // update button labels
   m.types.forEach((t,i)=>{
     const btn = document.getElementById('ty'+i);
     if(btn) btn.innerHTML = `<span class="ti">${m.icons[i]}</span>${t}`;
   });
-
-  // show/hide Slide Page
   const sp = document.getElementById('slide-page-field');
   if(sp) sp.style.display = m.slidePage ? '' : 'none';
-
-  // update mode bar
   document.getElementById('mode-webinar').classList.toggle('active', mode==='webinar');
   document.getElementById('mode-webinar').classList.toggle('webinar', mode==='webinar');
   document.getElementById('mode-interview').classList.toggle('active', mode==='interview');
   document.getElementById('mode-interview').classList.toggle('interview', mode==='interview');
-
-  // reset type selection to first
   pickType(0);
 }
-
-// init
-const TYPES    = [...MODES.webinar.types];
-const FLASH_IC = [...MODES.webinar.icons];
 
 
 function pickType(i){
