@@ -172,6 +172,30 @@ html,body{min-height:100%;background:#222426!important;color:#e8e8e6!important;f
 .exp-srt{background:#d4711a!important}
 .exp-csv{background:#3a7d44!important}
 
+
+/* MODE TOGGLE */
+.mode-bar{display:flex;gap:0;margin-bottom:10px;background:#363739;border-radius:8px;padding:3px}
+.mode-btn{flex:1;padding:7px 10px;border:none;border-radius:6px;font-size:12px;font-family:var(--mono);font-weight:500;letter-spacing:.04em;cursor:pointer;background:transparent;color:#888885;transition:all .2s;-webkit-appearance:none}
+.mode-btn.active{background:#2c2e31;color:#e8e8e6;box-shadow:0 1px 4px rgba(0,0,0,.3)}
+.mode-btn.active.webinar{color:#3dbcd4}
+.mode-btn.active.interview{color:#e8b84b}
+
+/* TOAST */
+#toast{position:fixed;top:64px;right:16px;z-index:999;background:#3dbcd4;color:#0d1f2d;font-family:var(--mono);font-size:13px;font-weight:600;padding:10px 18px;border-radius:8px;opacity:0;transform:translateY(-8px);pointer-events:none;transition:opacity .25s,transform .25s;white-space:nowrap}
+#toast.show{opacity:1;transform:translateY(0)}
+
+
+/* MODE TOGGLE */
+.mode-bar{display:flex;gap:0;margin-bottom:10px;background:#363739;border-radius:8px;padding:3px}
+.mode-btn{flex:1;padding:7px 10px;border:none;border-radius:6px;font-size:12px;font-family:var(--mono);font-weight:500;letter-spacing:.04em;cursor:pointer;background:transparent;color:#888885;transition:all .2s;-webkit-appearance:none}
+.mode-btn.active{background:#2c2e31;color:#e8e8e6;box-shadow:0 1px 4px rgba(0,0,0,.3)}
+.mode-btn.active.webinar{color:#3dbcd4}
+.mode-btn.active.interview{color:#e8b84b}
+
+/* TOAST */
+#toast{position:fixed;top:70px;right:16px;z-index:999;background:#3a7d44;color:#fff;font-size:13px;font-family:var(--mono);padding:10px 18px;border-radius:8px;opacity:0;pointer-events:none;transform:translateY(-8px);transition:opacity .25s,transform .25s;white-space:nowrap}
+#toast.show{opacity:1;transform:translateY(0)}
+
 /* iOS EXPORT VIEWER */
 #ev-wrap{display:none;position:fixed;inset:0;z-index:950;background:rgba(0,0,0,.92);flex-direction:column;padding:16px;gap:10px}
 #ev-wrap.on{display:flex}
@@ -243,6 +267,8 @@ html,body{min-height:100%;background:#222426!important;color:#e8e8e6!important;f
 <div id="flash-ov"><div id="flash-ic"></div></div>
 <div id="lightbox" onclick="closeLightbox()"><img id="lb-img" src="" alt="PPT"></div>
 
+<div id="toast"></div>
+
 <!-- ARCHIVE MODAL -->
 <div id="arch-modal">
   <div class="am-card">
@@ -271,9 +297,9 @@ html,body{min-height:100%;background:#222426!important;color:#e8e8e6!important;f
 <!-- HEADER -->
 <div id="hdr">
   <div id="hdr-in">
-    <span style="font-family:var(--mono);font-size:17px;font-weight:700;color:#3dbcd4;letter-spacing:.05em">TOFU LAB</span>
-    <span style="color:rgba(255,255,255,.2);margin:0 6px;font-size:17px">|</span>
-    <span style="font-size:17px;font-weight:400;color:#e8e8e6">行動場記表</span>
+    <span style="font-family:var(--mono);font-size:clamp(13px,3.5vw,17px);font-weight:700;color:#3dbcd4;letter-spacing:.05em;white-space:nowrap">TOFU LAB</span>
+    <span style="color:rgba(255,255,255,.2);margin:0 5px;font-size:clamp(13px,3.5vw,17px)">|</span>
+    <span style="font-size:clamp(13px,3.5vw,17px);font-weight:400;color:#e8e8e6;white-space:nowrap">行動場記表</span>
     <div class="spacer"></div>
     <div id="sync-dot" title="Firebase 同步狀態"></div>
     <button class="hdr-btn" onclick="openArchive()">場次清單</button>
@@ -299,11 +325,15 @@ html,body{min-height:100%;background:#222426!important;color:#e8e8e6!important;f
   <!-- NG FORM -->
   <div class="card">
     <div class="clabel" style="display:none">記錄 NG</div>
+    <div class="mode-bar">
+      <button class="mode-btn active webinar" id="mode-webinar" onclick="setMode('webinar')">📺 Webinar</button>
+      <button class="mode-btn interview" id="mode-interview" onclick="setMode('interview')">🎤 訪談</button>
+    </div>
     <div class="type-grid" style="grid-template-columns:repeat(5,1fr)">
       <button class="tbtn t0" id="ty0" onclick="pickType(0)"><span class="ti">✂️</span>Cut</button>
       <button class="tbtn t1" id="ty1" onclick="pickType(1)"><span class="ti">🔄</span>Reset</button>
       <button class="tbtn t2" id="ty2" onclick="pickType(2)"><span class="ti">🎙</span>聲音狀況</button>
-      <button class="tbtn t3" id="ty3" onclick="pickType(3)"><span class="ti">🖥</span>簡報調整</button>
+      <button class="tbtn t3" id="ty3" onclick="pickType(3)"><span class="ti">🖥</span>內容調整</button>
       <button class="tbtn t4" id="ty4" onclick="pickType(4)"><span class="ti">🚨</span>其他</button>
     </div>
     <div style="display:flex;gap:6px;margin-bottom:8px;align-items:flex-end">
@@ -320,12 +350,12 @@ html,body{min-height:100%;background:#222426!important;color:#e8e8e6!important;f
       </div>
     </div>
     <div style="display:flex;gap:6px;margin-bottom:8px;align-items:flex-start">
-      <div class="field" style="width:86px;flex-shrink:0">
-        <label>PPT 頁數</label>
-        <input id="f-ppt" type="number" min="1" placeholder="第 ? 頁" style="text-align:center">
+      <div class="field" id="slide-page-field" style="width:86px;flex-shrink:0">
+        <label>Slide Page</label>
+        <input id="f-ppt" type="number" min="1" placeholder="頁數" style="text-align:center">
       </div>
       <div class="field" style="flex:1;min-width:0">
-        <label>PPT 照片</label>
+        <label>上傳照片</label>
         <div class="photo-box" id="photo-box" onclick="document.getElementById('photo-input').click()">
           <div class="ph-ph"><span class="phi">📷</span><span>拍照 / 選圖</span></div>
         </div>
@@ -364,8 +394,6 @@ const FB = {
 const db = getFirestore(initializeApp(FB));
 
 // ── CONSTANTS ─────────────────────────────────────────────────
-const TYPES    = ['Cut','Reset','聲音狀況','簡報調整','其他'];
-const FLASH_IC = ['✂️','🔄','🎙','🖥','🚨'];
 const BADGE_C  = ['b0','b1','b2','b3','b4'];
 const SS_BADGE = [
   'background:rgba(184,122,18,.2);color:#d4a843;border:1px solid rgba(184,122,18,.3)',
@@ -433,7 +461,46 @@ async function quickOK(){
   }catch(e){setDot('err');alert('儲存失敗：'+e.message);}
 }
 
-// ── TYPE ──────────────────────────────────────────────────────
+// ── MODE ──────────────────────────────────────────────────────
+const MODES = {
+  webinar:   { types:['Cut','Reset','聲音狀況','內容調整','其他'], icons:['✂️','🔄','🎙','🖥','🚨'], slidePage:true  },
+  interview: { types:['口誤','重來','噪音','現場問題','其他'],    icons:['🗣','🔄','🎙','🚨','⚠️'], slidePage:false }
+};
+let currentMode = 'webinar';
+
+function setMode(mode){
+  currentMode = mode;
+  const m = MODES[mode];
+
+  // update TYPES and FLASH_IC in memory
+  TYPES.splice(0, TYPES.length, ...m.types);
+  FLASH_IC.splice(0, FLASH_IC.length, ...m.icons);
+
+  // update button labels
+  m.types.forEach((t,i)=>{
+    const btn = document.getElementById('ty'+i);
+    if(btn) btn.innerHTML = `<span class="ti">${m.icons[i]}</span>${t}`;
+  });
+
+  // show/hide Slide Page
+  const sp = document.getElementById('slide-page-field');
+  if(sp) sp.style.display = m.slidePage ? '' : 'none';
+
+  // update mode bar
+  document.getElementById('mode-webinar').classList.toggle('active', mode==='webinar');
+  document.getElementById('mode-webinar').classList.toggle('webinar', mode==='webinar');
+  document.getElementById('mode-interview').classList.toggle('active', mode==='interview');
+  document.getElementById('mode-interview').classList.toggle('interview', mode==='interview');
+
+  // reset type selection to first
+  pickType(0);
+}
+
+// init
+const TYPES    = [...MODES.webinar.types];
+const FLASH_IC = [...MODES.webinar.icons];
+
+
 function pickType(i){
   selType=i;
   for(let j=0;j<5;j++){
@@ -524,9 +591,15 @@ async function saveSession(){
   const spk =document.getElementById('spk').value.trim();
   const sid =TODAY.replace(/-/g,'')+'_'+Date.now();
   const savedTime=new Date().toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit',hour12:true});
+
+  const saveBtn=document.querySelector('.lbtn.save');
+  const origHTML=saveBtn.innerHTML;
+  saveBtn.innerHTML='⏳ Saving...';
+  saveBtn.disabled=true; saveBtn.style.opacity='.6';
+
   setDot('');
   try{
-    await setDoc(doc(db,'ng-archive',sid),{sid,proj,spk,date:TODAY,savedAt:Date.now(),count:logs.length,savedTime});
+    await setDoc(doc(db,'ng-archive',sid),{sid,proj,spk,date:TODAY,savedAt:Date.now(),count:logs.length,savedTime,mode:currentMode});
     const batch=writeBatch(db);
     logs.forEach(l=>batch.set(
       doc(db,'ng-archive',sid,'logs',String(l.id)),
@@ -534,9 +607,15 @@ async function saveSession(){
     ));
     await batch.commit();
     setDot('ok');
-    alert('✓ 已儲存「'+proj+'」— '+logs.length+' 筆現場紀錄');
+    showToast('✓ 已儲存「'+proj+'」— '+logs.length+' 筆現場紀錄');
     logs=[]; renderLogs();
-  }catch(e){setDot('err');alert('儲存失敗：'+e.message);}
+  }catch(e){
+    setDot('err');
+    showToast('⚠ 儲存失敗：'+e.message,'#c0392b');
+  }finally{
+    saveBtn.innerHTML=origHTML;
+    saveBtn.disabled=false; saveBtn.style.opacity='';
+  }
 }
 
 // ── ARCHIVE MODAL ─────────────────────────────────────────────
@@ -556,9 +635,13 @@ async function openArchive(){
       list.innerHTML='<div class="log-empty">尚無儲存場次</div>';return;
     }
     list.innerHTML=sessions.map(s=>`
-      <div class="si" onclick="toggleDetail('${s.sid}',this)">
-        <div class="si-title">${s.proj||'未命名'}${s.spk?' — '+s.spk:''}</div>
-        <div class="si-meta">${s.date}${s.savedTime?' '+s.savedTime:''}　${s.count||0} 筆現場紀錄　▶ 點開查看</div>
+      <div style="display:flex;align-items:stretch;gap:6px;margin-bottom:6px">
+        <div class="si" style="flex:1;margin-bottom:0" onclick="toggleDetail('${s.sid}',this)">
+          <div class="si-title">${s.proj||'未命名'}${s.spk?' — '+s.spk:''}</div>
+          <div class="si-meta">${s.date}${s.savedTime?' '+s.savedTime:''}　${s.count||0} 筆現場紀錄　▶ 點開查看</div>
+        </div>
+        <button onclick="deleteSession('${s.sid}','${encodeURIComponent(s.proj||'未命名')}')"
+          style="background:rgba(192,57,43,.15);border:1px solid rgba(192,57,43,.3);border-radius:8px;color:#e06b6a;font-size:16px;padding:0 12px;cursor:pointer;flex-shrink:0;-webkit-appearance:none">✕</button>
       </div>
       <div class="sd" id="sd-${s.sid}"></div>
     `).join('');
@@ -568,6 +651,24 @@ async function openArchive(){
 }
 
 function closeArchive(){document.getElementById('arch-modal').classList.remove('on')}
+
+async function deleteSession(sid, projEnc){
+  const proj=decodeURIComponent(projEnc);
+  if(!confirm('確定刪除「'+proj+'」？\n此操作無法復原。')) return;
+  try{
+    // delete all logs in session
+    const logsSnap=await getDocs(collection(db,'ng-archive',sid,'logs'));
+    const batch=writeBatch(db);
+    logsSnap.docs.forEach(d=>batch.delete(d.ref));
+    batch.delete(doc(db,'ng-archive',sid));
+    await batch.commit();
+    showToast('🗑 已刪除「'+proj+'」');
+    // refresh list
+    openArchive();
+  }catch(e){
+    showToast('⚠ 刪除失敗：'+e.message,'#c0392b');
+  }
+}
 
 async function toggleDetail(sid,itemEl){
   const detail=document.getElementById('sd-'+sid);
@@ -706,8 +807,9 @@ function closeLightbox(){document.getElementById('lightbox').classList.remove('o
 window.startTimer=startTimer;window.stopTimer=stopTimer;window.grabTC=grabTC;
 window.pickType=pickType;window.onPhoto=onPhoto;window.addNG=addNG;
 window.delLog=delLog;window.clearCurrent=clearCurrent;window.saveSession=saveSession;
-window.quickOK=quickOK;
+window.quickOK=quickOK;window.showToast=showToast;window.setMode=setMode;
 window.openArchive=openArchive;window.closeArchive=closeArchive;
+window.deleteSession=deleteSession;
 window.toggleDetail=toggleDetail;window.dlSRT=dlSRT;window.dlCSV=dlCSV;
 window.openLightbox=openLightbox;window.closeLightbox=closeLightbox;
 window.updateNote=updateNote;
