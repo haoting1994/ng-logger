@@ -472,7 +472,7 @@ async function quickOK(){
 // ── MODE ──────────────────────────────────────────────────────
 const MODES = {
   webinar:   { types:['Cut','Reset','聲音狀況','內容調整','其他'], icons:['✂️','🔄','🎙','🖥','🚨'], slidePage:true  },
-  interview: { types:['口誤','重來','噪音','現場問題','其他'],    icons:['🗣','🔄','🎙','🚨','⚠️'], slidePage:false }
+  interview: { types:['Cut','Reset','Host','Guest','Other'],    icons:['✂️','🔄','🎤','👤','⚠️'], slidePage:false }
 };
 let currentMode = 'webinar';
 const TYPES    = [...MODES.webinar.types];
