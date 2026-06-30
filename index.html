@@ -367,6 +367,8 @@ html,body{min-height:100%;background:#222426!important;color:#e8e8e6!important;f
   <div class="card">
     <div class="log-hdr">
       <span class="log-cnt" id="log-cnt">現場紀錄 0 筆</span>
+      <button onclick="calcDuration()" title="計算有效錄製時長"
+        style="background:#e8e8e6!important;border:1px solid #e8e8e6!important;border-radius:6px;color:#0d1f2d!important;font-size:12px;font-family:var(--mono);font-weight:600;padding:6px 11px;cursor:pointer;-webkit-appearance:none;white-space:nowrap;margin-right:6px">⏱ 時長</button>
       <button class="lbtn" id="ok-btn" onclick="quickOK()" style="color:#3dbcd4!important;border-color:rgba(61,188,212,.35)!important;font-weight:600;letter-spacing:.04em">✓ OK</button>
       <button class="lbtn save" onclick="saveSession()">💾 儲存場次</button>
       <button class="lbtn" onclick="clearCurrent()">清空</button>
@@ -519,7 +521,108 @@ function onPhoto(e){
   r.readAsDataURL(f);
 }
 
-// ── FLASH ─────────────────────────────────────────────────────
+// ── EFFECTIVE DURATION CALCULATOR ────────────────────────────
+function tcToMs(tc){
+  const clean = tc.replace(',','.');
+  const parts = clean.split(':');
+  if(parts.length < 3) return 0;
+  const [h,m,s] = parts;
+  return ((parseInt(h)||0)*3600 + (parseInt(m)||0)*60 + (parseFloat(s)||0)) * 1000;
+}
+
+function msToDisplay(ms){
+  const s = Math.floor(ms/1000);
+  const min = Math.floor(s/60);
+  const sec = s%60;
+  const cent = Math.floor((ms%1000)/10);
+  return (min>0?min+'分':'')+sec+'.'+String(cent).padStart(2,'0')+'秒';
+}
+
+function getDurationData(){
+  if(!logs.length) return {};
+  const sorted = [...logs].filter(l=>l.tc).sort((a,b)=>tcToMs(a.tc)-tcToMs(b.tc));
+  if(!sorted.length) return {};
+
+  const CUT=1, RESET=2, START=0, END=4;
+  let recStart=null, recEnd=null, ngTotal=0, lastCut=null;
+
+  for(const l of sorted){
+    if(l.type===START||l.type===CUT){ if(recStart===null) recStart=tcToMs(l.tc); }
+    if(l.type===END||l.type===CUT){ recEnd=tcToMs(l.tc); }
+    if(l.type===CUT){ lastCut=tcToMs(l.tc); }
+    else if(l.type===RESET && lastCut!==null){ ngTotal+=tcToMs(l.tc)-lastCut; lastCut=null; }
+  }
+  if(recStart===null) recStart=tcToMs(sorted[0].tc);
+  if(recEnd===null)   recEnd=tcToMs(sorted[sorted.length-1].tc);
+
+  const totalMs  = Math.max(0, recEnd-recStart);
+  const effectiveMs = Math.max(0, totalMs-ngTotal);
+  return {
+    totalMs, ngMs:ngTotal, effectiveMs,
+    totalDisplay:   msToDisplay(totalMs),
+    ngDisplay:      msToDisplay(ngTotal),
+    effectiveDisplay: msToDisplay(effectiveMs)
+  };
+}
+
+function calcDuration(){
+  if(!logs.length){ showToast('尚無紀錄','#888'); return; }
+  const d = getDurationData();
+  if(!d.totalMs && d.totalMs!==0){ showToast('無法讀取 Timecode','#888'); return; }
+  alert(
+    '📹 總錄製時長：'+d.totalDisplay+'\n'+
+    '✂️ NG 時間：'+d.ngDisplay+'\n'+
+    '✅ 有效時長：'+d.effectiveDisplay
+  );
+}
+
+
+function copyNoteClip(id){
+  const l = logs.find(l=>l.id===id);
+  if(!l || !l.note){ showToast('備註為空','#888'); return; }
+  navigator.clipboard?.writeText(l.note).then(()=>{
+    showToast('已複製：'+l.note);
+  }).catch(()=>{
+    // fallback for older iOS
+    const ta=document.createElement('textarea');
+    ta.value=l.note; ta.style.position='fixed'; ta.style.opacity='0';
+    document.body.appendChild(ta); ta.select(); ta.setSelectionRange(0,9999);
+    document.execCommand('copy'); ta.remove();
+    showToast('已複製：'+l.note);
+  });
+}
+
+
+function copyNoteToNext(id){
+  const idx = logs.findIndex(l=>l.id===id);
+  if(idx < 0) return;
+  const sourceNote = logs[idx].note || '';
+  if(!sourceNote){ showToast('請先填入備註再複製','#888'); return; }
+
+  // Take increment
+  const takeMatch = sourceNote.match(/^(.*)\s+Take\s+(\d+)$/i);
+  const newNote = takeMatch
+    ? takeMatch[1].trim() + ' Take ' + (parseInt(takeMatch[2])+1)
+    : sourceNote + ' Take 2';
+
+  // logs[0]=newest, logs[last]=oldest
+  // Recording order: ... Reset(older,higher idx) -> Cut -> Reset(newer,lower idx) ...
+  // "next Reset" = the Reset that comes AFTER this one in recording time
+  //              = lower index (more recent) skipping Cut entries
+  // But we need the NEXT Reset in recording sequence = search toward lower idx, skip non-Reset
+  let targetIdx = -1;
+  for(let i = idx-1; i >= 0; i--){
+    if(logs[i].type === 2){ targetIdx = i; break; } // Reset = type 2
+    if(logs[i].type === 1) continue; // skip Cut
+  }
+  if(targetIdx < 0){ showToast('找不到下一個 Reset','#888'); return; }
+
+  logs[targetIdx].note = newNote;
+  renderLogs();
+  showToast('已複製到 #'+(logs.length-targetIdx)+' Reset：'+newNote);
+}
+
+
 function fireFlash(t){
   const ov=document.getElementById('flash-ov');
   document.getElementById('flash-ic').textContent=FLASH_IC[t];
@@ -534,6 +637,7 @@ function addNG(){
   const ppt =document.getElementById('f-ppt').value.trim();
   const note=document.getElementById('f-note').value.trim();
   const ok  =false;
+  const typeUsed = selType;
   logs.unshift({tc,roll,ppt,note,type:selType,photo:photoData,id:Date.now(),ok});
   document.getElementById('f-tc').value='';
   document.getElementById('f-ppt').value='';
@@ -541,8 +645,15 @@ function addNG(){
   photoData=null;
   document.getElementById('photo-box').innerHTML='<div class="ph-ph"><span class="phi">📷</span><span>拍照 / 選圖</span></div>';
   document.getElementById('photo-input').value='';
-  fireFlash(selType);
+  fireFlash(typeUsed);
   renderLogs();
+
+  // ── Auto-toggle Cut ↔ Reset ──
+  // webinar: Cut=1, Reset=2 / interview: Cut=0, Reset=1
+  const cutIdx   = currentMode==='webinar' ? 1 : 0;
+  const resetIdx = currentMode==='webinar' ? 2 : 1;
+  if(typeUsed === cutIdx)   pickType(resetIdx);
+  else if(typeUsed === resetIdx) pickType(cutIdx);
 }
 
 function delLog(id){logs=logs.filter(l=>l.id!==id);renderLogs()}
@@ -568,10 +679,17 @@ function renderLogs(){
           ${l.ok?`<span class="badge" style="background:rgba(58,125,68,.25);color:#5ecf80;border:1px solid rgba(58,125,68,.4)">✓ OK</span>`:''}
         </div>
         ${l.photo?`<img class="li-thumb" src="${l.photo}" onclick="openLightbox('${l.photo}')" alt="PPT">`:''}
-        <input class="note-inline" data-id="${l.id}"
-          value="${(l.note||'').replace(/"/g,'&quot;')}"
-          placeholder="＋ 備註"
-          onchange="updateNote(${l.id},this.value)">
+        <div style="display:flex;align-items:center;gap:4px;margin-top:4px">
+          <input class="note-inline" data-id="${l.id}"
+            value="${(l.note||'').replace(/"/g,'&quot;')}"
+            placeholder="＋ 備註"
+            onchange="updateNote(${l.id},this.value)"
+            style="margin-top:0;flex:1">
+          <button onclick="copyNoteClip(${l.id})" title="複製到剪貼簿"
+            style="background:none;border:none;cursor:pointer;color:#555552;font-size:13px;padding:2px 4px;flex-shrink:0;font-family:var(--mono)">⎘</button>
+          <button onclick="copyNoteToNext(${l.id})" title="複製並 Take 遞增到下一筆"
+            style="background:none;border:none;cursor:pointer;color:#555552;font-size:14px;padding:2px 4px;flex-shrink:0;font-family:var(--mono)">⟳</button>
+        </div>
       </div>
       <button class="del-btn" onclick="delLog(${l.id})">✕</button>
     </div>`).join('');
@@ -590,6 +708,9 @@ async function saveSession(){
   const sid =TODAY.replace(/-/g,'')+'_'+Date.now();
   const savedTime=new Date().toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit',hour12:true});
 
+  // calculate effective duration to store
+  const durationData = getDurationData();
+
   const saveBtn=document.querySelector('.lbtn.save');
   const origHTML=saveBtn.innerHTML;
   saveBtn.innerHTML='⏳ Saving...';
@@ -597,7 +718,10 @@ async function saveSession(){
 
   setDot('');
   try{
-    await setDoc(doc(db,'ng-archive',sid),{sid,proj,spk,date:TODAY,savedAt:Date.now(),count:logs.length,savedTime,mode:currentMode});
+    await setDoc(doc(db,'ng-archive',sid),{
+      sid,proj,spk,date:TODAY,savedAt:Date.now(),count:logs.length,savedTime,
+      mode:currentMode, ...durationData
+    });
     const batch=writeBatch(db);
     logs.forEach(l=>batch.set(
       doc(db,'ng-archive',sid,'logs',String(l.id)),
@@ -636,7 +760,7 @@ async function openArchive(){
       <div style="display:flex;align-items:stretch;gap:6px;margin-bottom:6px">
         <div class="si" style="flex:1;margin-bottom:0" onclick="toggleDetail('${s.sid}',this)">
           <div class="si-title">${s.proj||'未命名'}${s.spk?' — '+s.spk:''}</div>
-          <div class="si-meta">${s.date}${s.savedTime?' '+s.savedTime:''}　${s.count||0} 筆現場紀錄　▶ 點開查看</div>
+          <div class="si-meta">${s.date}${s.savedTime?' '+s.savedTime:''}　${s.count||0} 筆現場紀錄${s.effectiveDisplay?'　✅ '+s.effectiveDisplay:''}　▶ 點開查看</div>
         </div>
         <button onclick="deleteSession('${s.sid}','${encodeURIComponent(s.proj||'未命名')}')"
           style="background:rgba(192,57,43,.15);border:1px solid rgba(192,57,43,.3);border-radius:8px;color:#e06b6a;font-size:16px;padding:0 12px;cursor:pointer;flex-shrink:0;-webkit-appearance:none">✕</button>
@@ -764,7 +888,7 @@ async function dlSRT(sid,projEnc){
     gOrder.forEach(k=>groups[k].forEach(l=>{
       const cam=l.roll?'CAM'+l.roll:'';
       const ppt=l.ppt?' p.'+l.ppt:'';const note=l.note?' — '+l.note:'';
-      srt+=`${idx}\n${toSRT(l.tc)} --> ${addSec(l.tc,3)}\n[${TYPES[l.type]}] ${cam}${ppt}${note}\n\n`;idx++;
+      srt+=`${idx}\n${toSRT(l.tc)} --> ${addSec(l.tc,2)}\n[${TYPES[l.type]}] ${cam}${ppt}${note}\n\n`;idx++;
     }));
     const metaSnap2=await getDocs(collection(db,'ng-archive'));const meta2=metaSnap2.docs.map(d=>d.data()).find(d=>d.sid===sid);const spk2=meta2?.spk||'';const date2=meta2?.date||TODAY;const fn2=date2+'_'+proj+(spk2?'_'+spk2:'')+'_ALL.srt';
     triggerDL(srt,fn2,'text/plain');
@@ -773,7 +897,7 @@ async function dlSRT(sid,projEnc){
       let srt='';
       groups[k].forEach((l,i)=>{
         const ppt=l.ppt?' p.'+l.ppt:'';const note=l.note?' — '+l.note:'';
-        srt+=`${i+1}\n${toSRT(l.tc)} --> ${addSec(l.tc,3)}\n[${TYPES[l.type]}]${ppt}${note}\n\n`;
+        srt+=`${i+1}\n${toSRT(l.tc)} --> ${addSec(l.tc,2)}\n[${TYPES[l.type]}]${ppt}${note}\n\n`;
       });
       const cl=k!=='x'?'_CAM'+k:'';
       setTimeout(async()=>{const ms=await getDocs(collection(db,'ng-archive'));const mt=ms.docs.map(d=>d.data()).find(d=>d.sid===sid);const sp=mt?.spk||'';const dt=mt?.date||TODAY;triggerDL(srt,dt+'_'+proj+(sp?'_'+sp:'')+cl+'.srt','text/plain');},gi*700);
@@ -806,6 +930,7 @@ window.startTimer=startTimer;window.stopTimer=stopTimer;window.grabTC=grabTC;
 window.pickType=pickType;window.onPhoto=onPhoto;window.addNG=addNG;
 window.delLog=delLog;window.clearCurrent=clearCurrent;window.saveSession=saveSession;
 window.quickOK=quickOK;window.showToast=showToast;window.setMode=setMode;
+window.copyNoteToNext=copyNoteToNext;window.copyNoteClip=copyNoteClip;window.calcDuration=calcDuration;
 window.openArchive=openArchive;window.closeArchive=closeArchive;
 window.deleteSession=deleteSession;
 window.toggleDetail=toggleDetail;window.dlSRT=dlSRT;window.dlCSV=dlCSV;
