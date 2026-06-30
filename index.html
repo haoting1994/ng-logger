@@ -333,17 +333,6 @@ html,body{min-height:100%;background:#222426!important;color:#e8e8e6!important;f
       <button class="tbtn t3" id="ty3" onclick="pickType(3)"><span class="ti">🎙</span>聲音狀況</button>
       <button class="tbtn t4" id="ty4" onclick="pickType(4)"><span class="ti">⏹</span>End</button>
     </div>
-
-    <!-- VOICE TEST (口令喚醒測試版) -->
-    <div style="background:#1c1d1f;border:1px dashed rgba(255,255,255,.15);border-radius:8px;padding:10px 12px;margin-bottom:10px">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-        <button id="voice-btn" onclick="toggleVoiceTest()"
-          style="background:#363739!important;border:1px solid rgba(255,255,255,.15)!important;border-radius:6px;color:#888885!important;font-size:12px;font-family:var(--mono);padding:6px 12px;cursor:pointer;-webkit-appearance:none;white-space:nowrap">🎙 語音測試</button>
-        <span id="voice-status" style="font-size:11px;color:#555552;font-family:var(--mono)">未啟動</span>
-      </div>
-      <div id="voice-transcript" style="font-size:12px;color:#555552;font-style:italic;min-height:18px;word-break:break-all">說「開始」「Cut」「倒數321」試試...</div>
-      <div id="voice-log" style="display:flex;flex-direction:column;gap:3px;margin-top:6px;max-height:90px;overflow-y:auto"></div>
-    </div>
     <div style="display:flex;gap:6px;margin-bottom:8px;align-items:flex-end">
       <div class="field" style="width:86px;flex-shrink:0">
         <label>檔號 CAM</label>
@@ -607,151 +596,31 @@ function calcDuration(){
 }
 
 
-// ── VOICE TEST (口令喚醒) ─────────────────────────────────────
-let recognition = null;
-let voiceListening = false;
-let voiceRestartTimer = null;
+// ── COPY / PASTE NOTE with Take auto-increment ────────────────
+let clipboardNote = '';   // base text (without "Take N" suffix)
+let clipboardTake  = 1;   // last used Take number for this clipboard session
 
-// keyword → which TYPE LABEL to trigger (resolved per-mode at runtime)
-const VOICE_KEYWORDS = [
-  { match: /開始|start/i,                    label:'「開始」',     wantLabel:'Start' },
-  { match: /cut|卡|停|剪/i,                  label:'「Cut」',       wantLabel:'Cut'   },
-  { match: /倒數|3.?2.?1?|321|三二一?|準備/, label:'「倒數321」',  wantLabel:'Reset' },
-];
-
-function toggleVoiceTest(){
-  if(voiceListening){ stopVoiceTest(); }
-  else { startVoiceTest(); }
-}
-
-function startVoiceTest(){
-  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if(!SR){ showToast('此瀏覽器不支援語音辨識','#c0392b'); return; }
-
-  voiceListening = true;
-  document.getElementById('voice-btn').textContent = '⏹ 停止測試';
-  document.getElementById('voice-btn').style.color = '#e06b6a';
-  document.getElementById('voice-btn').style.borderColor = 'rgba(192,57,43,.4)';
-  document.getElementById('voice-status').textContent = '🔴 監聽中...';
-  document.getElementById('voice-status').style.color = '#e06b6a';
-
-  launchRecognizer(SR);
-}
-
-function launchRecognizer(SR){
-  if(!voiceListening) return;
-  recognition = new SR();
-  recognition.lang = 'zh-TW';
-  recognition.continuous = true;
-  recognition.interimResults = true;
-
-  recognition.onresult = (e)=>{
-    let interim='', final='';
-    for(let i=e.resultIndex; i<e.results.length; i++){
-      const text=e.results[i][0].transcript;
-      if(e.results[i].isFinal) final+=text; else interim+=text;
-    }
-    document.getElementById('voice-transcript').textContent = interim || final || '...';
-    if(final){ checkVoiceKeyword(final); }
-  };
-
-  recognition.onerror = (e)=>{
-    // 'aborted' and 'no-speech' are normal/expected — just let onend restart
-    if(e.error!=='no-speech' && e.error!=='aborted'){
-      showToast('語音辨識錯誤：'+e.error,'#c0392b');
-    }
-  };
-
-  recognition.onend = ()=>{
-    if(!voiceListening) return;
-    // small delay avoids rapid-restart loop that triggers 'aborted'
-    clearTimeout(voiceRestartTimer);
-    voiceRestartTimer = setTimeout(()=>launchRecognizer(SR), 350);
-  };
-
-  try{ recognition.start(); }
-  catch(e){ /* already running, ignore */ }
-}
-
-function stopVoiceTest(){
-  voiceListening = false;
-  clearTimeout(voiceRestartTimer);
-  if(recognition){ recognition.onend=null; recognition.onerror=null; try{recognition.stop();}catch(e){} }
-  document.getElementById('voice-btn').textContent = '🎙 語音測試';
-  document.getElementById('voice-btn').style.color = '#888885';
-  document.getElementById('voice-btn').style.borderColor = 'rgba(255,255,255,.15)';
-  document.getElementById('voice-status').textContent = '未啟動';
-  document.getElementById('voice-status').style.color = '#555552';
-  document.getElementById('voice-transcript').textContent = '說「開始」「Cut」「倒數321」試試...';
-}
-
-function checkVoiceKeyword(text){
-  for(const kw of VOICE_KEYWORDS){
-    if(kw.match.test(text)){
-      // find the type index in current mode matching wantLabel
-      const m = MODES[currentMode];
-      const typeIdx = m.types.findIndex(t => t.toLowerCase() === kw.wantLabel.toLowerCase());
-      if(typeIdx < 0) return; // this mode doesn't have that type, ignore
-
-      const time = new Date().toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
-      const logEl = document.getElementById('voice-log');
-      const entry = document.createElement('div');
-      entry.style.cssText = 'font-size:11px;font-family:var(--mono);padding:3px 8px;border-radius:4px;background:rgba(255,255,255,.04);color:#3dbcd4';
-      entry.textContent = `${time}  偵測到 ${kw.label} → 自動 ${kw.wantLabel}  (原句："${text.trim()}")`;
-      logEl.prepend(entry);
-      while(logEl.children.length > 5) logEl.removeChild(logEl.lastChild);
-
-      pickType(typeIdx);
-      addNG();
-      return;
-    }
-  }
-}
-
-// ── COPY NOTE TO CLIPBOARD ────────────────────────────────────
 function copyNoteClip(id){
   const l = logs.find(l=>l.id===id);
   if(!l || !l.note){ showToast('備註為空','#888'); return; }
-  navigator.clipboard?.writeText(l.note).then(()=>{
-    showToast('已複製：'+l.note);
-  }).catch(()=>{
-    // fallback for older iOS
-    const ta=document.createElement('textarea');
-    ta.value=l.note; ta.style.position='fixed'; ta.style.opacity='0';
-    document.body.appendChild(ta); ta.select(); ta.setSelectionRange(0,9999);
-    document.execCommand('copy'); ta.remove();
-    showToast('已複製：'+l.note);
-  });
+
+  const m = l.note.match(/^(.*)\s+Take\s+(\d+)$/i);
+  clipboardNote = m ? m[1].trim() : l.note.trim();
+  clipboardTake = m ? parseInt(m[2]) : 1;
+
+  navigator.clipboard?.writeText(l.note).catch(()=>{});
+  showToast('已複製：'+clipboardNote);
 }
 
+function pasteNoteTake(id){
+  if(!clipboardNote){ showToast('請先複製一筆備註','#888'); return; }
+  const target = logs.find(l=>l.id===id);
+  if(!target) return;
 
-function copyNoteToNext(id){
-  const idx = logs.findIndex(l=>l.id===id);
-  if(idx < 0) return;
-  const sourceNote = logs[idx].note || '';
-  if(!sourceNote){ showToast('請先填入備註再複製','#888'); return; }
-
-  // Take increment
-  const takeMatch = sourceNote.match(/^(.*)\s+Take\s+(\d+)$/i);
-  const newNote = takeMatch
-    ? takeMatch[1].trim() + ' Take ' + (parseInt(takeMatch[2])+1)
-    : sourceNote + ' Take 2';
-
-  // logs[0]=newest, logs[last]=oldest
-  // Recording order: ... Reset(older,higher idx) -> Cut -> Reset(newer,lower idx) ...
-  // "next Reset" = the Reset that comes AFTER this one in recording time
-  //              = lower index (more recent) skipping Cut entries
-  // But we need the NEXT Reset in recording sequence = search toward lower idx, skip non-Reset
-  let targetIdx = -1;
-  for(let i = idx-1; i >= 0; i--){
-    if(logs[i].type === 2){ targetIdx = i; break; } // Reset = type 2
-    if(logs[i].type === 1) continue; // skip Cut
-  }
-  if(targetIdx < 0){ showToast('找不到下一個 Reset','#888'); return; }
-
-  logs[targetIdx].note = newNote;
+  clipboardTake += 1; // increments every paste, regardless of target's prior content
+  target.note = clipboardNote + ' Take ' + clipboardTake;
   renderLogs();
-  showToast('已複製到 #'+(logs.length-targetIdx)+' Reset：'+newNote);
+  showToast('已貼上：'+target.note);
 }
 
 
@@ -821,7 +690,7 @@ function renderLogs(){
             style="background:#363739!important;border:1px solid rgba(255,255,255,.15)!important;border-radius:6px;cursor:pointer;color:#a8a8a5;font-size:16px;padding:6px 10px;flex-shrink:0;font-family:var(--mono);min-width:38px;-webkit-appearance:none;display:flex;align-items:center;justify-content:center">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
           </button>
-          <button onclick="copyNoteToNext(${l.id})" title="複製並 Take 遞增到下一筆"
+          <button onclick="pasteNoteTake(${l.id})" title="貼上複製的備註並 Take +1"
             style="background:#363739!important;border:1px solid rgba(255,255,255,.15)!important;border-radius:6px;cursor:pointer;color:#a8a8a5;font-size:18px;padding:6px 10px;flex-shrink:0;font-family:var(--mono);min-width:38px;-webkit-appearance:none">🎬</button>
         </div>
       </div>
@@ -1074,8 +943,7 @@ window.startTimer=startTimer;window.stopTimer=stopTimer;window.grabTC=grabTC;
 window.pickType=pickType;window.onPhoto=onPhoto;window.addNG=addNG;
 window.delLog=delLog;window.clearCurrent=clearCurrent;window.saveSession=saveSession;
 window.quickOK=quickOK;window.showToast=showToast;window.setMode=setMode;
-window.copyNoteToNext=copyNoteToNext;window.copyNoteClip=copyNoteClip;window.calcDuration=calcDuration;
-window.toggleVoiceTest=toggleVoiceTest;
+window.pasteNoteTake=pasteNoteTake;window.copyNoteClip=copyNoteClip;window.calcDuration=calcDuration;
 window.openArchive=openArchive;window.closeArchive=closeArchive;
 window.deleteSession=deleteSession;
 window.toggleDetail=toggleDetail;window.dlSRT=dlSRT;window.dlCSV=dlCSV;
