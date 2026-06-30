@@ -333,6 +333,17 @@ html,body{min-height:100%;background:#222426!important;color:#e8e8e6!important;f
       <button class="tbtn t3" id="ty3" onclick="pickType(3)"><span class="ti">🎙</span>聲音狀況</button>
       <button class="tbtn t4" id="ty4" onclick="pickType(4)"><span class="ti">⏹</span>End</button>
     </div>
+
+    <!-- VOICE TEST (口令喚醒測試版) -->
+    <div style="background:#1c1d1f;border:1px dashed rgba(255,255,255,.15);border-radius:8px;padding:10px 12px;margin-bottom:10px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+        <button id="voice-btn" onclick="toggleVoiceTest()"
+          style="background:#363739!important;border:1px solid rgba(255,255,255,.15)!important;border-radius:6px;color:#888885!important;font-size:12px;font-family:var(--mono);padding:6px 12px;cursor:pointer;-webkit-appearance:none;white-space:nowrap">🎙 語音測試</button>
+        <span id="voice-status" style="font-size:11px;color:#555552;font-family:var(--mono)">未啟動</span>
+      </div>
+      <div id="voice-transcript" style="font-size:12px;color:#555552;font-style:italic;min-height:18px;word-break:break-all">說「倒數321」試試...</div>
+      <div id="voice-log" style="display:flex;flex-direction:column;gap:3px;margin-top:6px;max-height:90px;overflow-y:auto"></div>
+    </div>
     <div style="display:flex;gap:6px;margin-bottom:8px;align-items:flex-end">
       <div class="field" style="width:86px;flex-shrink:0">
         <label>檔號 CAM</label>
@@ -596,7 +607,95 @@ function calcDuration(){
 }
 
 
-function copyNoteClip(id){
+// ── VOICE TEST (口令喚醒測試版) ────────────────────────────────
+let recognition = null;
+let voiceListening = false;
+const VOICE_KEYWORDS = [
+  { match: /倒數|3.?2|321|三二|準備/, label: '「倒數321」', action: 'Reset', color: '#3dbcd4' },
+];
+
+function toggleVoiceTest(){
+  if(voiceListening){ stopVoiceTest(); }
+  else { startVoiceTest(); }
+}
+
+function startVoiceTest(){
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!SR){
+    showToast('此瀏覽器不支援語音辨識','#c0392b');
+    return;
+  }
+  recognition = new SR();
+  recognition.lang = 'zh-TW';
+  recognition.continuous = true;
+  recognition.interimResults = true;
+
+  recognition.onstart = ()=>{
+    voiceListening = true;
+    document.getElementById('voice-btn').textContent = '⏹ 停止測試';
+    document.getElementById('voice-btn').style.color = '#e06b6a';
+    document.getElementById('voice-btn').style.borderColor = 'rgba(192,57,43,.4)';
+    document.getElementById('voice-status').textContent = '🔴 監聽中...';
+    document.getElementById('voice-status').style.color = '#e06b6a';
+  };
+
+  recognition.onresult = (e)=>{
+    let interim = '';
+    let final = '';
+    for(let i=e.resultIndex; i<e.results.length; i++){
+      const text = e.results[i][0].transcript;
+      if(e.results[i].isFinal) final += text;
+      else interim += text;
+    }
+    document.getElementById('voice-transcript').textContent = interim || final || '...';
+    if(final){ checkVoiceKeyword(final); }
+  };
+
+  recognition.onerror = (e)=>{
+    if(e.error === 'no-speech') return;
+    showToast('語音辨識錯誤：'+e.error,'#c0392b');
+  };
+
+  recognition.onend = ()=>{
+    if(voiceListening){ try{ recognition.start(); }catch(e){} }
+  };
+
+  try{ recognition.start(); }
+  catch(e){ showToast('無法啟動麥克風：'+e.message,'#c0392b'); }
+}
+
+function stopVoiceTest(){
+  voiceListening = false;
+  if(recognition){ recognition.onend = null; recognition.stop(); }
+  document.getElementById('voice-btn').textContent = '🎙 語音測試';
+  document.getElementById('voice-btn').style.color = '#888885';
+  document.getElementById('voice-btn').style.borderColor = 'rgba(255,255,255,.15)';
+  document.getElementById('voice-status').textContent = '未啟動';
+  document.getElementById('voice-status').style.color = '#555552';
+  document.getElementById('voice-transcript').textContent = '說「倒數321」試試...';
+}
+
+function checkVoiceKeyword(text){
+  for(const kw of VOICE_KEYWORDS){
+    if(kw.match.test(text)){
+      const time = new Date().toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
+      const logEl = document.getElementById('voice-log');
+      const entry = document.createElement('div');
+      entry.style.cssText = 'font-size:11px;font-family:var(--mono);padding:3px 8px;border-radius:4px;background:rgba(255,255,255,.04);color:'+kw.color;
+      entry.textContent = `${time}  偵測到 ${kw.label} → 自動 ${kw.action}  (原句："${text.trim()}")`;
+      logEl.prepend(entry);
+      while(logEl.children.length > 5) logEl.removeChild(logEl.lastChild);
+
+      // auto-trigger Reset
+      const resetIdx = currentMode==='webinar' ? 2 : 1;
+      pickType(resetIdx);
+      addNG();
+      return;
+    }
+  }
+}
+
+
   const l = logs.find(l=>l.id===id);
   if(!l || !l.note){ showToast('備註為空','#888'); return; }
   navigator.clipboard?.writeText(l.note).then(()=>{
@@ -960,6 +1059,7 @@ window.pickType=pickType;window.onPhoto=onPhoto;window.addNG=addNG;
 window.delLog=delLog;window.clearCurrent=clearCurrent;window.saveSession=saveSession;
 window.quickOK=quickOK;window.showToast=showToast;window.setMode=setMode;
 window.copyNoteToNext=copyNoteToNext;window.copyNoteClip=copyNoteClip;window.calcDuration=calcDuration;
+window.toggleVoiceTest=toggleVoiceTest;
 window.openArchive=openArchive;window.closeArchive=closeArchive;
 window.deleteSession=deleteSession;
 window.toggleDetail=toggleDetail;window.dlSRT=dlSRT;window.dlCSV=dlCSV;
