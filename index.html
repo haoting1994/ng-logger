@@ -308,7 +308,7 @@ html,body{min-height:100%;background:#222426!important;color:#e8e8e6!important;f
   <!-- TIMER + META -->
   <div class="card">
     <div class="timer-row">
-      <div id="timer">00:00:00.00</div>
+      <div id="timer">00:00:00:00</div>
       <div id="waveform"><span></span><span></span><span></span><span></span><span></span></div>
       <button class="roll-btn" onclick="startTimer()">▶ ROLL</button>
       <button class="stop-btn" onclick="stopTimer()">■ STOP</button>
@@ -341,7 +341,7 @@ html,body{min-height:100%;background:#222426!important;color:#e8e8e6!important;f
       <div class="tc-field" style="flex:1;min-width:0">
         <div class="tc-label">Timecode</div>
         <div class="tc-wrap">
-          <input class="tc-input" id="f-tc" placeholder="00:00:00" style="min-width:0">
+          <input class="tc-input" id="f-tc" placeholder="00:00:00:00" style="min-width:0">
           <button class="grab-btn" onclick="grabTC()" style="width:44px;flex-shrink:0;font-size:20px">⏱</button>
         </div>
       </div>
@@ -410,10 +410,21 @@ const TODAY = now.toISOString().slice(0,10);
 
 // ── INIT ──────────────────────────────────────────────────────
 function pad(n){return String(n).padStart(2,'0')}
-function s2tc(ms){
-  const tot=Math.floor(ms/1000);
-  const cc=Math.floor((ms%1000)/10);
-  return pad(Math.floor(tot/3600))+':'+pad(Math.floor(tot%3600/60))+':'+pad(tot%60)+'.'+pad(cc);
+// Camera (Z190) Timecode format: HH:MM:SS:FF (NDF — Non-Drop Frame)
+// FF = frame number, 0–29 (30 frames per labeled second, real rate 29.97fps)
+// Camera TC runs slightly FASTER than real wall-clock time because it
+// takes camera less real time to count 30 frames than a true second.
+const NDF_FACTOR = 30/(30000/1001); // ≈ 1.001001
+
+function s2tc(realMs){
+  const ms = realMs * NDF_FACTOR;
+  const totalFrames = Math.floor(ms/1000*30); // 30 frames per labeled second
+  const ff = totalFrames % 30;
+  const totalSec = Math.floor(totalFrames/30);
+  const ss = totalSec % 60;
+  const mm = Math.floor(totalSec/60) % 60;
+  const hh = Math.floor(totalSec/3600) % 24;
+  return pad(hh)+':'+pad(mm)+':'+pad(ss)+':'+pad(ff);
 }
 function isIOS(){return /iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1)}
 function setDot(s){const d=document.getElementById('sync-dot');d.className='';if(s)d.classList.add(s)}
@@ -428,14 +439,14 @@ function startTimer(){
   document.querySelector('.roll-btn').classList.add('on');
   document.querySelector('.stop-btn').classList.remove('on');
   tint=setInterval(()=>{
-    elapsed=Date.now()-startTime;
+    elapsed=Date.now()-startTime; // elapsed = REAL ms
     document.getElementById('timer').textContent=s2tc(elapsed);
   },50);
 }
 function stopTimer(){
   if(!running)return;
   running=false; clearInterval(tint); elapsed=0; startTime=0;
-  document.getElementById('timer').textContent='00:00:00.00';
+  document.getElementById('timer').textContent='00:00:00:00';
   document.getElementById('timer').classList.remove('on');
   document.getElementById('waveform').classList.remove('on');
   document.querySelector('.roll-btn').classList.remove('on');
@@ -446,6 +457,7 @@ function stopTimer(){
   document.getElementById('f-ppt').value='';
 }
 function grabTC(){const ms=running?Date.now()-startTime:elapsed;document.getElementById('f-tc').value=s2tc(ms);}
+
 
 function showToast(msg, color='#3a7d44'){
   const t=document.getElementById('toast');
@@ -523,10 +535,17 @@ function onPhoto(e){
 
 // ── EFFECTIVE DURATION CALCULATOR ────────────────────────────
 function tcToMs(tc){
+  // format: HH:MM:SS:FF (frames 0-29) or legacy HH:MM:SS.cc
+  const parts = tc.split(':');
+  if(parts.length === 4){
+    const [h,m,s,ff] = parts.map(Number);
+    return ((h*3600 + m*60 + s) + ff/30) * 1000;
+  }
+  // legacy fallback HH:MM:SS.cc or HH:MM:SS,000
   const clean = tc.replace(',','.');
-  const parts = clean.split(':');
-  if(parts.length < 3) return 0;
-  const [h,m,s] = parts;
+  const p2 = clean.split(':');
+  if(p2.length < 3) return 0;
+  const [h,m,s] = p2;
   return ((parseInt(h)||0)*3600 + (parseInt(m)||0)*60 + (parseFloat(s)||0)) * 1000;
 }
 
@@ -879,8 +898,18 @@ async function dlSRT(sid,projEnc){
   const proj=decodeURIComponent(projEnc);
   const snap=await getDocs(query(collection(db,'ng-archive',sid,'logs'),orderBy('id','asc')));
   const rows=snap.docs.map(d=>d.data());
-  function toSRT(tc){const p=tc.split(':');while(p.length<3)p.unshift('00');return p.map(x=>String(x).padStart(2,'0')).join(':')+',000'}
-  function addSec(tc,s){const p=tc.split(':').map(Number);let t=(p[0]||0)*3600+(p[1]||0)*60+(p[2]||0)+s;return pad(Math.floor(t/3600))+':'+pad(Math.floor(t%3600/60))+':'+pad(t%60)+',000'}
+  function toSRT(tc){
+    const ms = tcToMs(tc); // tcToMs already handles HH:MM:SS:FF
+    const totS = Math.floor(ms/1000);
+    const mmm = Math.floor(ms%1000);
+    return pad(Math.floor(totS/3600))+':'+pad(Math.floor(totS%3600/60))+':'+pad(totS%60)+','+String(mmm).padStart(3,'0');
+  }
+  function addSec(tc,s){
+    const ms = tcToMs(tc) + s*1000;
+    const totS = Math.floor(ms/1000);
+    const mmm = Math.floor(ms%1000);
+    return pad(Math.floor(totS/3600))+':'+pad(Math.floor(totS%3600/60))+':'+pad(totS%60)+','+String(mmm).padStart(3,'0');
+  }
   const groups={},gOrder=[];
   rows.forEach(l=>{const k=l.roll||'x';if(!groups[k]){groups[k]=[];gOrder.push(k);}groups[k].push(l);});
   if(isIOS()){
