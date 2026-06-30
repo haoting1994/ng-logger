@@ -562,14 +562,25 @@ function getDurationData(){
   const sorted = [...logs].filter(l=>l.tc).sort((a,b)=>tcToMs(a.tc)-tcToMs(b.tc));
   if(!sorted.length) return {};
 
-  const CUT=1, RESET=2, START=0, END=4;
+  const START=0, CUT=1, RESET=2, END=4;
   let recStart=null, recEnd=null, ngTotal=0, lastCut=null;
 
   for(const l of sorted){
-    if(l.type===START||l.type===CUT){ if(recStart===null) recStart=tcToMs(l.tc); }
-    if(l.type===END||l.type===CUT){ recEnd=tcToMs(l.tc); }
+    // recording starts at the FIRST Start or Cut
+    if((l.type===START||l.type===CUT) && recStart===null){ recStart=tcToMs(l.tc); }
+
+    // NG deduction: time between a Cut and the Reset that follows it
     if(l.type===CUT){ lastCut=tcToMs(l.tc); }
     else if(l.type===RESET && lastCut!==null){ ngTotal+=tcToMs(l.tc)-lastCut; lastCut=null; }
+
+    // recording ends at the LAST End. If no End exists, fall back to last Cut.
+    if(l.type===END){ recEnd=tcToMs(l.tc); }
+  }
+  if(recEnd===null){
+    // no End found — fall back to the last Cut as the stop point
+    for(let i=sorted.length-1;i>=0;i--){
+      if(sorted[i].type===CUT){ recEnd=tcToMs(sorted[i].tc); break; }
+    }
   }
   if(recStart===null) recStart=tcToMs(sorted[0].tc);
   if(recEnd===null)   recEnd=tcToMs(sorted[sorted.length-1].tc);
@@ -655,6 +666,12 @@ function addNG(){
   const resetIdx = currentMode==='webinar' ? 2 : 1;
   if(typeUsed === cutIdx)   pickType(resetIdx);
   else if(typeUsed === resetIdx) pickType(cutIdx);
+
+  // ── Auto-STOP timer when End is recorded (webinar mode, type=4) ──
+  const endIdx = currentMode==='webinar' ? 4 : -1;
+  if(typeUsed === endIdx && running){
+    stopTimer();
+  }
 }
 
 function delLog(id){logs=logs.filter(l=>l.id!==id);renderLogs()}
