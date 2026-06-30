@@ -695,7 +695,8 @@ function checkVoiceKeyword(text){
   }
 }
 
-
+// ── COPY NOTE TO CLIPBOARD ────────────────────────────────────
+function copyNoteClip(id){
   const l = logs.find(l=>l.id===id);
   if(!l || !l.note){ showToast('備註為空','#888'); return; }
   navigator.clipboard?.writeText(l.note).then(()=>{
